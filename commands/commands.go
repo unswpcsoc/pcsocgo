@@ -1,4 +1,4 @@
-// Package commands implements a command interface for PCSocBot
+// Package commands implements a command interface for pcsocgo
 // with helper structs and funcs for sending discordgo messages,
 // and high-level abstractions of buntdb
 package commands
@@ -11,7 +11,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	"github.com/unswpcsoc/PCSocBot/internal/utils"
+	"github.com/unswpcsoc/pcsocgo/internal/utils"
 )
 
 const (

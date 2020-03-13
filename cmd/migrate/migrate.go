@@ -8,7 +8,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/unswpcsoc/PCSocBot/commands"
+	"github.com/unswpcsoc/pcsocgo/commands"
 )
 
 // use tag implementation

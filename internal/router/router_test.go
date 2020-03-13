@@ -7,8 +7,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	comm "github.com/unswpcsoc/PCSocBot/commands"
-	. "github.com/unswpcsoc/PCSocBot/router"
+	comm "github.com/unswpcsoc/pcsocgo/commands"
+	. "github.com/unswpcsoc/pcsocgo/router"
 )
 
 // signal testing

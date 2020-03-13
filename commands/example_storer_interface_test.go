@@ -3,7 +3,7 @@ package commands_test
 import (
 	"fmt"
 
-	"github.com/unswpcsoc/PCSocBot/commands"
+	"github.com/unswpcsoc/pcsocgo/commands"
 )
 
 type Person struct {

@@ -9,7 +9,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	"github.com/unswpcsoc/PCSocBot/commands"
+	"github.com/unswpcsoc/pcsocgo/commands"
 )
 
 const (

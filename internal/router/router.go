@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	comm "github.com/unswpcsoc/PCSocBot/commands"
+	comm "github.com/unswpcsoc/pcsocgo/commands"
 )
 
 // Leaf is a leaf of the command router tree.

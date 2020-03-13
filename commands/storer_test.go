@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	. "github.com/unswpcsoc/PCSocBot/commands"
+	. "github.com/unswpcsoc/pcsocgo/commands"
 )
 
 /* preamble */

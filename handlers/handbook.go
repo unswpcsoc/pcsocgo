@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/unswpcsoc/PCSocBot/commands"
+	"github.com/unswpcsoc/pcsocgo/commands"
 
 	"github.com/bwmarrin/discordgo"
 )

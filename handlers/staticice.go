@@ -10,7 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
 
-	"github.com/unswpcsoc/PCSocBot/commands"
+	"github.com/unswpcsoc/pcsocgo/commands"
 )
 
 const (

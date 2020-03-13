@@ -1,2 +1,2 @@
-# PCSocBot
-Bot for UNSW PCSoc Discord. Stores tags, quotes, and screams at you.
+# pcsocgo
+Bot (in Golang) for UNSW PCSoc Discord. Stores tags, quotes, and screams at you.
