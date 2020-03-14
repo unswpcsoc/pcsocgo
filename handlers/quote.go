@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ const (
 	keyQuotes  = "approve"
 
 	quoteLineLimit = 50
+	quoteListLimit = 20
 )
 
 var (
@@ -37,7 +39,7 @@ var (
 // quotes implements the Storer interface
 type quotes struct {
 	List []string
-	Last int
+	Last int // THIS FIELD HAS BEEN DEPRECATED, DO NOT RELY ON IT, USE len(List) INSTEAD!
 }
 
 func (q *quotes) Index() string {
@@ -87,7 +89,7 @@ func (q *quote) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*comm
 		ind = rand.Intn(len(quo.List))
 	} else {
 		ind = q.Index[0]
-		if ind > quo.Last || ind < 0 {
+		if ind > len(quo.List) || ind < 0 {
 			return nil, ErrQuoteIndex
 		}
 	}
@@ -133,7 +135,7 @@ func (q *quoteAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 	newQuote = strings.Join(q.New, " ")
 
 	pen.List = append(pen.List, newQuote)
-	pen.Last++
+	//pen.Last++
 
 	// Set the pending quote list in the db
 	_, _, err = commands.DBSet(&pen, keyPending)
@@ -143,7 +145,7 @@ func (q *quoteAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 
 	// Send message to channel
 	out := "Added" + utils.Block(newQuote) + "to the Pending list at index "
-	out += utils.Code(strconv.Itoa(pen.Last))
+	out += utils.Code(strconv.Itoa(len(pen.List)))
 	return commands.NewSimpleSend(msg.ChannelID, out), nil
 }
 
@@ -171,7 +173,7 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 	}
 
 	// Check index
-	if err != nil || q.Index < 0 || q.Index > pen.Last {
+	if err != nil || q.Index < 0 || q.Index > len(pen.List) {
 		return nil, ErrQuoteIndex
 	}
 
@@ -189,35 +191,44 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 
 	// Move pending quote to approved list, filling gaps first
 	var ins int
-	if quo.Last == -1 {
-		// quote list is empty
-		quo.List = append(quo.List, pen.List[q.Index])
-		quo.Last++
-		ins = quo.Last
-	} else {
+	func() {
+		if len(quo.List) == 0 {
+			// quote list is empty
+			quo.List = append(quo.List, pen.List[q.Index])
+			//quo.Last++
+			ins = len(quo.List)
+			return
+		}
+
 		// quote list is not empty
-		ins = quo.Last + 1
-		for i, q := range quo.List {
-			if len(q) == 0 {
+		ins = len(quo.List)
+
+		// find first empty index in the list
+		for i, quote := range quo.List {
+			if len(quote) == 0 {
+				// found index, insert
 				ins = i
-				break
+				quo.List[ins] = pen.List[q.Index]
+				return
 			}
 		}
-		if ins > quo.Last {
-			quo.List = append(quo.List, pen.List[q.Index])
-			quo.Last = ins
-		} else {
-			quo.List[ins] = pen.List[q.Index]
-		}
-	}
 
-	// Reorder pending list
+		// didn't find index, insert at end
+		quo.List = append(quo.List, pen.List[q.Index])
+		//quo.Last = ins
+	}()
+
+	// get all elements before the index
 	newPen := pen.List[:q.Index]
-	if q.Index != pen.Last {
+
+	// not at the end, splice the rest on
+	if q.Index != len(pen.List) {
 		newPen = append(newPen, pen.List[q.Index+1:]...)
 	}
+
+	// set new pending list
 	pen.List = newPen
-	pen.Last--
+	//pen.Last--
 
 	// Set quotes and pending
 	_, _, err = commands.DBSet(&pen, keyPending)
@@ -237,19 +248,21 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 
 type quoteList struct {
 	nilCommand
+	Index []int `arg:"lookaround"`
 }
 
 func newQuoteList() *quoteList { return &quoteList{} }
 
 func (q *quoteList) Aliases() []string { return []string{"quote list", "quote ls"} }
 
-func (q *quoteList) Desc() string { return "Lists all approved quotes." }
+func (q *quoteList) Desc() string {
+	return "Lists a range of approved quotes. Specify an index to look around it (defaults to 10)."
+}
 
 func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
 	// Get all approved quotes from db
 	var quo quotes
 	err := commands.DBGet(&quotes{}, keyQuotes, &quo)
-	snd := commands.NewSend(msg.ChannelID)
 
 	if err == commands.ErrDBNotFound {
 		return nil, ErrQuoteEmpty
@@ -257,35 +270,66 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		return nil, err
 	}
 
-	// List them
-	var tmp string
+	ind := 10
+	if len(quo.List) < ind {
+		ind = 0
+	}
+
+	// check if user specified an index
+	if len(q.Index) > 0 {
+		// Check index
+		if q.Index[0] < 0 || q.Index[0] >= len(quo.List) {
+			return nil, ErrQuoteIndex
+		}
+		ind = q.Index[0]
+	}
+
+	// List away!
 	var out = utils.Under("Quotes:") + "\n"
-	for i, q := range quo.List {
+
+	// closure so we don't have to repeat this logic
+	addQuote := func(buf string, i int, quote string) string {
 		// deleted quote, skip
-		if len(q) == 0 {
-			continue
+		if len(quote) == 0 {
+			return buf
 		}
 
-		if len(q) > quoteLineLimit {
-			q = q[:quoteLineLimit] + "[...]"
+		if len(quote) > quoteLineLimit {
+			quote = quote[:quoteLineLimit] + "[...]"
 		}
 
-		tmp = utils.Bold("#"+strconv.Itoa(i)+":") + " " + q + "\n"
+		// don't worry about message limit, won't be reached
+		buf += fmt.Sprintf("**#%d:** %s\n", i, quote)
+		return buf
+	}
 
-		if len(out)+len(tmp) >= commands.MessageLimit {
-			// reached message limit, add a new message to Send
-			snd.Message(out)
-			out = tmp
-		} else {
-			out += tmp
+	// do elements before index
+	// calculate before limit
+	before := ind - (quoteListLimit / 2)
+	if before < 0 {
+		before = 0
+	} else {
+		for i, q := range quo.List[before:ind] {
+			out = addQuote(out, i, q)
 		}
 	}
 
-	return snd.Message(out), nil
+	// do elements including and after index
+	// calculate right limit
+	right := ind + (quoteListLimit / 2)
+	if right > len(quo.List) {
+		right = len(quo.List)
+	}
+	for i, q := range quo.List[ind:right] {
+		out = addQuote(out, i, q)
+	}
+
+	return commands.NewSimpleSend(msg.ChannelID, out), nil
 }
 
 type quotePending struct {
 	nilCommand
+	Index []int `arg:"index"`
 }
 
 func newQuotePending() *quotePending { return &quotePending{} }
@@ -309,13 +353,23 @@ func (q *quotePending) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 		return commands.NewSimpleSend(msg.ChannelID, "Pending list is empty."), nil
 	}
 
-	// List them
-	out := utils.Under("Pending quotes:") + "\n"
-	for i, q := range pen.List {
-		if len(q) > quoteLineLimit {
-			q = q[:quoteLineLimit] + "[...]"
+	// Build output
+	var out string
+	if len(q.Index) == 0 {
+		// List them
+		out = utils.Under("Pending quotes:") + "\n"
+		for i, q := range pen.List {
+			out += utils.Bold("#"+strconv.Itoa(i)+":") + " " + q + "\n"
 		}
-		out += utils.Bold("#"+strconv.Itoa(i)+":") + " " + q + "\n"
+	} else {
+		ind := q.Index[0]
+		// Check index
+		if ind < 0 || ind >= len(pen.List) {
+			return nil, ErrQuoteIndex
+		}
+
+		// TODO: test
+		out = fmt.Sprintf("Pending quote at index **%d**:\n%s", q.Index[0], pen.List[ind])
 	}
 
 	return commands.NewSimpleSend(msg.ChannelID, out), nil
@@ -343,18 +397,18 @@ func (q *quoteReject) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) 
 	}
 
 	// Check index
-	if q.Index < 0 || q.Index > pen.Last {
+	if q.Index < 0 || q.Index >= len(pen.List) {
 		return nil, ErrQuoteIndex
 	}
 
 	// Reorder list
 	rej := pen.List[q.Index]
 	newPen := pen.List[:q.Index]
-	if q.Index != pen.Last {
+	if q.Index != len(pen.List) {
 		newPen = append(newPen, pen.List[q.Index+1:]...)
 	}
 	pen.List = newPen
-	pen.Last--
+	//pen.Last--
 
 	// Set pending
 	_, _, err = commands.DBSet(&pen, keyPending)
@@ -390,22 +444,13 @@ func (q *quoteRemove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) 
 	}
 
 	// Check index
-	if q.Index < 0 || q.Index > quo.Last {
+	if q.Index < 0 || q.Index >= len(quo.List) {
 		return nil, ErrQuoteIndex
 	}
 
-	// Clear index, don't reorder
+	// Clear quote at index, don't reorder
 	rem := quo.List[q.Index]
 	quo.List[q.Index] = ""
-	if q.Index == quo.Last {
-		// Change last to first non-clear last
-		for i := quo.Last; i >= 0; i-- {
-			if len(quo.List[i]) > 0 {
-				quo.Last = i
-				break
-			}
-		}
-	}
 
 	// Set quotes
 	_, _, err = commands.DBSet(&quo, keyQuotes)
@@ -445,6 +490,7 @@ func (q *quoteSearch) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) 
 	}
 
 	// use fuzzy finding to get top 5 results
+	// TODO: find a better fuzzy find
 	mat := fuzzy.Find(qry, quo.List)
 	if len(mat) == 0 {
 		return commands.NewSimpleSend(msg.ChannelID, "No matches found."), nil
