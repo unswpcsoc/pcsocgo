@@ -31,6 +31,7 @@ var (
 		regexp.MustCompile("(?i)kill[[:space:]]*myself"),
 		regexp.MustCompile("(?i)kill[[:space:]]*me"),
 		regexp.MustCompile("(?i)retard"),
+		regexp.MustCompile("(?i)nigger"),
 	}
 
 	ErrLoggingOn  = errors.New("logging is already on")
