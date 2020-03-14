@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -43,7 +44,9 @@ func newArchive() *archive { return &archive{} }
 
 func (a *archive) Aliases() []string { return []string{"archive"} }
 
-func (a *archive) Desc() string { return "Generates an embed for archiving a message" }
+func (a *archive) Desc() string {
+	return "Generates an embed for archiving a message.\nThe ordering for indexes is based on the order of messages reacted."
+}
 
 func (a *archive) Roles() []string { return []string{"mod"} }
 
@@ -85,41 +88,43 @@ func (a *archive) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 	out := &discordgo.MessageSend{
 		Content: "",
 		Tts:     false,
+		Files:   []*discordgo.File{},
 	}
 
-	// add images
-	if len(arc.Attachments) > 0 {
-		// get response, assuming only 1 attachment
-		url := arc.Attachments[0].URL
+	// add images, if they exist
+	for i, attachment := range arc.Attachments {
+		// get response, enqueue all attachments and assume image format
+		url := attachment.URL
 		splits := strings.Split(url, ".")
 		format := splits[len(splits)-1]
 
-		resp, err := http.Get(url)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
+		// func for the purpose of ez deferral
+		func() {
+			resp, err := http.Get(url)
+			if err != nil {
+				return
+			}
+			defer resp.Body.Close()
 
-		// read into buffer
-		buf, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
+			// read into buffer
+			buf, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return
+			}
 
-		// attach to our message
-		out.File = &discordgo.File{
-			Name:        "archive." + format,
-			ContentType: "image/" + format,
-			Reader:      bytes.NewReader(buf),
-		}
+			// attach to our message
+			out.Files = append(out.Files, &discordgo.File{
+				Name:        fmt.Sprintf("archive%d.%s", i, format),
+				ContentType: "image/" + format,
+				Reader:      bytes.NewReader(buf),
+			})
+		}()
 	}
 
 	// generate archive embed
 	out.Embed = &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
-			// hotlink
-			URL: "https://discordapp.com/channels/" + arc.GuildID +
-				"/" + cid + "/" + mid,
+			URL:     fmt.Sprintf("https://discordapp.com/channels/%s/%s/%s", arc.GuildID, cid, mid),
 			IconURL: arc.Author.AvatarURL(""),
 			Name:    arc.Author.String(),
 		},
@@ -127,7 +132,7 @@ func (a *archive) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 		Description: arc.Content,
 
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: "archived message from " + cha.Name + " | " + string(arc.Timestamp),
+			Text: fmt.Sprintf("Archived message from %s | %s", cha.Name, arc.Timestamp),
 		},
 
 		Color: ses.State.UserColor(arc.Author.ID, cid),
@@ -136,7 +141,7 @@ func (a *archive) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 	// send to archive channel
 	ses.ChannelMessageSendComplex(archiveChan, out)
 
-	return commands.NewSimpleSend(msg.ChannelID, "archived message!"), nil
+	return commands.NewSimpleSend(msg.ChannelID, "Archived message!"), nil
 }
 
 func initArchive(ses *discordgo.Session) {
