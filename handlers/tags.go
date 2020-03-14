@@ -308,14 +308,6 @@ func (t *tagsClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 
 	ses.ChannelMessageSend(msg.ChannelID, "Starting cleaning session! This may take a while...")
 
-	// get roles
-	/* roles
-	roles, err := ses.GuildRoles(msg.GuildID)
-	if err != nil {
-		return nil, err
-	}
-	*/
-
 	// cache already seen uids
 	checkMap := make(map[string]bool)
 
@@ -331,36 +323,6 @@ func (t *tagsClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 			ses.ChannelMessageSend(msg.ChannelID, "Removed empty platform: "+utils.Code(pname))
 			continue
 		}
-
-		/* roles
-		// check role associated with platform
-		exists := false
-		for _, rol := range roles {
-			if rol.ID == plt.Role.ID {
-				exists = true
-				break
-			}
-		}
-		if !exists {
-			// ASSUME only error is role not existing in server
-			// create new role
-			var drl *discordgo.Role
-			drl, err = ses.GuildRoleCreate(msg.GuildID)
-			if err != nil {
-				return nil, err
-			}
-
-			// edit the role
-			ses.GuildRoleEdit(msg.GuildID, drl.ID, pname, teal, false, drl.Permissions, true)
-			if err != nil {
-				return nil, err
-			}
-
-			// add role to platform
-			plt.Role = drl
-			ses.ChannelMessageSend(msg.ChannelID, "Re-created missing role for platform: "+utils.Code(pname))
-		}
-		*/
 
 		// check valid users
 		for uid, _ := range plt.Users {
@@ -388,15 +350,6 @@ func (t *tagsClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 					continue
 				}
 			}
-
-			/* roles
-			// update roles
-			if usr.PingMe {
-				ses.GuildMemberRoleAdd(msg.GuildID, uid, plt.Role.ID)
-			} else {
-				ses.GuildMemberRoleRemove(msg.GuildID, uid, plt.Role.ID)
-			}
-			*/
 
 			// update usernames
 			plt.Users[uid].Username = mem.User.Username
@@ -921,4 +874,28 @@ func (t *tagsModRemove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message
 	}
 
 	return nil, ErrNoPlatform
+}
+
+func initClean(ses *discordgo.Session) chan bool {
+	// check at 2am
+	ticker := time.NewTicker(time.Hour)
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if time.Now().Hour() == 2 {
+					// call handler
+					cmd := &tagsClean{}
+					cmd.MsgHandle(ses, &discordgo.Message{
+						ChannelID: "123",
+						GuildID:   "123",
+					})
+				}
+			}
+		}
+	}()
+	return done
 }
