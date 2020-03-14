@@ -86,3 +86,10 @@ func InitLogs(ses *discordgo.Session) {
 	initDel(ses)
 	initArchive(ses)
 }
+
+// InitDaemons inits all daemons, returns a slice of channels to close when done
+func InitDaemons(ses *discordgo.Session) []chan bool {
+	ret := []chan bool{}
+	ret = append(ret, initClean(ses))
+	return ret
+}
