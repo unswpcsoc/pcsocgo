@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sahilm/fuzzy"
 
 	"github.com/unswpcsoc/pcsocgo/commands"
 	"github.com/unswpcsoc/pcsocgo/internal/utils"
@@ -21,6 +21,8 @@ const (
 
 	quoteLineLimit = 80
 	quoteListLimit = 10
+
+	searchLimit = 5
 )
 
 var (
@@ -463,15 +465,22 @@ type quoteSearch struct {
 	Query []string `arg:"query"`
 }
 
+type searchMatch struct {
+	content string
+	index   int
+}
+
 func newQuoteSearch() *quoteSearch { return &quoteSearch{} }
 
 func (q *quoteSearch) Aliases() []string { return []string{"quote search", "quote se"} }
 
-func (q *quoteSearch) Desc() string { return "Searches for a quote, returns top 5 results." }
+func (q *quoteSearch) Desc() string {
+	return fmt.Sprintf("Searches for a quote, returns top %d results.", searchLimit)
+}
 
 func (q *quoteSearch) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
 	// Join query
-	qry := strings.TrimSpace(strings.Join(q.Query, " "))
+	qry := strings.TrimSpace(strings.Join(q.Query, "[ \\._-]"))
 	if len(qry) == 0 {
 		return nil, ErrQueryNone
 	}
@@ -485,20 +494,32 @@ func (q *quoteSearch) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) 
 		return nil, err
 	}
 
-	// use fuzzy finding to get top 5 results
-	// TODO: find a better fuzzy find
-	mat := fuzzy.Find(qry, quo.List)
-	if len(mat) == 0 {
+	matches := []*searchMatch{}
+	for i, quote := range quo.List {
+		match, err := regexp.Match("(?i)"+qry, []byte(quote))
+		if err != nil {
+			return nil, err
+		}
+
+		if match {
+			matches = append(matches, &searchMatch{
+				content: quote,
+				index:   i,
+			})
+		}
+	}
+
+	if len(matches) == 0 {
 		return commands.NewSimpleSend(msg.ChannelID, "No matches found."), nil
 	}
 
 	// print results
 	out := "Search Results:\n"
-	for i, m := range mat {
-		if i == 5 {
+	for i, match := range matches {
+		if i == searchLimit {
 			break
 		}
-		out += utils.Bold("#"+strconv.Itoa(m.Index)+": ") + m.Str + "\n"
+		out += utils.Bold("#"+strconv.Itoa(match.index)+": ") + match.content + "\n"
 	}
 
 	return commands.NewSimpleSend(msg.ChannelID, out), nil
