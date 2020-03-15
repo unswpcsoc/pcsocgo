@@ -3,11 +3,13 @@ package handlers
 import (
 	"errors"
 	"fmt"
-	"golang.org/x/sync/semaphore"
+	logs "log"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/sync/semaphore"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -28,6 +30,14 @@ const (
 	userLimit = 20 // discord's nick limit is 32
 
 	addTimeout = 7
+
+	// PCSoc
+	cleanChannelID = "543714149536890883"
+	cleanGuildID   = "157263595128881153"
+
+	// PCSoc2
+	//cleanChannelID = "462063414408249376"
+	//cleanGuildID   = "462063414408249374"
 )
 
 var (
@@ -306,21 +316,21 @@ func (t *tagsClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		return nil, err
 	}
 
-	ses.ChannelMessageSend(msg.ChannelID, "Starting cleaning session! This may take a while...")
+	out := "Starting cleaning session! This may take a while, delete this message to stop cleaning... "
+	got, _ := ses.ChannelMessageSend(msg.ChannelID, out)
+	editableID := got.ID
 
 	// cache already seen uids
 	checkMap := make(map[string]bool)
 
 	// iterate platforms
+	progress := 0
 	for pname, plt := range tgs.Platforms {
 		// clean empty platforms
 		if len(plt.Users) == 0 || len(plt.Name) == 0 {
-			// remove the role from guild, fails silently
-			ses.GuildRoleDelete(msg.GuildID, plt.Role.ID)
-
 			// remove the platform
 			delete(tgs.Platforms, pname)
-			ses.ChannelMessageSend(msg.ChannelID, "Removed empty platform: "+utils.Code(pname))
+			logs.Println("Removed empty platform: " + utils.Code(pname))
 			continue
 		}
 
@@ -331,7 +341,7 @@ func (t *tagsClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 				if !res {
 					// has been checked and is invalid, remove
 					delete(plt.Users, uid)
-					ses.ChannelMessageSend(msg.ChannelID, "Removed invalid user: "+uid)
+					logs.Println("Removed invalid user: " + uid)
 				}
 				continue
 			}
@@ -343,7 +353,7 @@ func (t *tagsClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 				if err != nil {
 					// couldn't find user, remove tag from db
 					delete(plt.Users, uid)
-					ses.ChannelMessageSend(msg.ChannelID, "Removed invalid user: "+uid)
+					logs.Println("Removed invalid user: " + uid)
 
 					// update cache
 					checkMap[uid] = false
@@ -351,12 +361,21 @@ func (t *tagsClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 				}
 			}
 
-			// update usernames
+			// update username
 			plt.Users[uid].Username = mem.User.Username
-			ses.ChannelMessageSend(msg.ChannelID, "Updated username for "+uid+" to "+mem.User.Username)
 
 			// update cache
 			checkMap[uid] = true
+		}
+
+		// update progress
+		progress++
+
+		progressString := fmt.Sprintf("`%03d%% | (%d/%d Platforms)`\n", 100*progress/len(tgs.Platforms), progress, len(tgs.Platforms))
+		_, err := ses.ChannelMessageEdit(msg.ChannelID, editableID, out+progressString)
+		if err != nil {
+			logs.Println("tagsClean -> ChannelMessageEdit:", err)
+			return commands.NewSimpleSend(msg.ChannelID, "Cancelled clean, no changes committed"), nil
 		}
 	}
 
@@ -878,22 +897,40 @@ func (t *tagsModRemove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message
 
 func initClean(ses *discordgo.Session) chan bool {
 	// check at 2am
+	logs.Println("Initialised clean")
+
 	ticker := time.NewTicker(time.Hour)
 	done := make(chan bool)
+
+	doClean := func() {
+		if time.Now().Hour() == 2 {
+			// call handler
+			logs.Println("Calling tagsClean handler")
+			cmd := &tagsClean{}
+			_, err := cmd.MsgHandle(ses, &discordgo.Message{
+				ChannelID: cleanChannelID,
+				GuildID:   cleanGuildID,
+			})
+			if err != nil {
+				logs.Println("doClean:", err)
+				return
+			}
+		}
+	}
+
 	go func() {
+		select {
+		case <-done:
+			return
+		default:
+			doClean()
+		}
 		for {
 			select {
 			case <-done:
 				return
 			case <-ticker.C:
-				if time.Now().Hour() == 2 {
-					// call handler
-					cmd := &tagsClean{}
-					cmd.MsgHandle(ses, &discordgo.Message{
-						ChannelID: "123",
-						GuildID:   "123",
-					})
-				}
+				doClean()
 			}
 		}
 	}()
