@@ -83,6 +83,11 @@ func main() {
 	// init loggers
 	handlers.InitLogs(dgo)
 
+	// init daemons
+	var closeDaemons func()
+	closeDaemons = handlers.InitDaemons(dgo)
+	defer closeDaemons()
+
 	// handle commands
 	dgo.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// catch panics on production
