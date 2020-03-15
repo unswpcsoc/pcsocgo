@@ -92,7 +92,7 @@ func (q *quote) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*comm
 		ind = rand.Intn(len(quo.List))
 	} else {
 		ind = q.Index[0]
-		if ind > len(quo.List) || ind < 0 {
+		if ind >= len(quo.List) || ind < 0 {
 			return nil, ErrQuoteIndex
 		}
 	}
@@ -175,7 +175,7 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 	}
 
 	// Check index
-	if err != nil || q.Index < 0 || q.Index > len(pen.List) {
+	if err != nil || q.Index < 0 || q.Index >= len(pen.List) {
 		return nil, ErrQuoteIndex
 	}
 
@@ -242,7 +242,7 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 		return nil, err
 	}
 
-	out := fmt.Sprintf("Approved quote ```%s``` now at index **#%d**", utils.Block(quo.List[ins]), ins)
+	out := fmt.Sprintf("Approved quote %s now at index **#%d**", utils.Block(quo.List[ins]), ins)
 
 	return commands.NewSimpleSend(msg.ChannelID, out), nil
 }
@@ -308,7 +308,7 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 	}
 
 	after := ind + (quoteListLimit / 2) + 1
-	if after > len(quo.List) {
+	if after >= len(quo.List) {
 		after = len(quo.List)
 	}
 
@@ -480,7 +480,10 @@ func (q *quoteSearch) Desc() string {
 
 func (q *quoteSearch) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
 	// Join query
-	qry := strings.TrimSpace(strings.Join(q.Query, "[ \\._-]"))
+	qry := strings.TrimSpace(strings.Join(q.Query, "[ \\._-]*"))
+
+	// Enforce only alphanumeric regex
+	qry = regexp.MustCompile("[^a-zA-Z0-9]+").ReplaceAllString(qry, "")
 	if len(qry) == 0 {
 		return nil, ErrQueryNone
 	}
