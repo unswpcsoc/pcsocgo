@@ -19,8 +19,8 @@ const (
 	keyPending = "pending"
 	keyQuotes  = "approve"
 
-	quoteLineLimit = 50
-	quoteListLimit = 20
+	quoteLineLimit = 80
+	quoteListLimit = 10
 )
 
 var (
@@ -68,6 +68,7 @@ func (q *quote) Subcommands() []commands.Command {
 		newQuoteRemove(),
 		newQuoteReject(),
 		newQuoteSearch(),
+		newQuoteClean(),
 	}
 }
 
@@ -132,7 +133,7 @@ func (q *quoteAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 	}
 
 	// Put the new quote into the pending quote list and update Last
-	newQuote = strings.Join(q.New, " ")
+	newQuote = strings.ReplaceAll(strings.Join(q.New, " "), `\n`, "\n")
 
 	pen.List = append(pen.List, newQuote)
 	//pen.Last++
@@ -144,8 +145,7 @@ func (q *quoteAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 	}
 
 	// Send message to channel
-	out := "Added" + utils.Block(newQuote) + "to the Pending list at index "
-	out += utils.Code(strconv.Itoa(len(pen.List)))
+	out := fmt.Sprintf("Added ```%s``` to the Pending list at index **#%d**", newQuote, len(pen.List)-1)
 	return commands.NewSimpleSend(msg.ChannelID, out), nil
 }
 
@@ -240,8 +240,7 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 		return nil, err
 	}
 
-	out := "Approved quote\n" + utils.Block(quo.List[ins]) + "now at index "
-	out += utils.Code(strconv.Itoa(ins))
+	out := fmt.Sprintf("Approved quote ```%s``` now at index **#%d**", utils.Block(quo.List[ins]), ins)
 
 	return commands.NewSimpleSend(msg.ChannelID, out), nil
 }
@@ -284,11 +283,8 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		ind = q.Index[0]
 	}
 
-	// List away!
-	var out = utils.Under("Quotes:") + "\n"
-
 	// closure so we don't have to repeat this logic
-	addQuote := func(buf string, i int, quote string) string {
+	appendQuote := func(buf string, i int, quote string) string {
 		// deleted quote, skip
 		if len(quote) == 0 {
 			return buf
@@ -303,25 +299,25 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		return buf
 	}
 
-	// do elements before index
-	// calculate before limit
+	// List away!
 	before := ind - (quoteListLimit / 2)
 	if before < 0 {
 		before = 0
-	} else {
-		for i, q := range quo.List[before:ind] {
-			out = addQuote(out, i, q)
-		}
 	}
 
-	// do elements including and after index
-	// calculate right limit
-	right := ind + (quoteListLimit / 2)
-	if right > len(quo.List) {
-		right = len(quo.List)
+	after := ind + (quoteListLimit / 2) + 1
+	if after > len(quo.List) {
+		after = len(quo.List)
 	}
-	for i, q := range quo.List[ind:right] {
-		out = addQuote(out, i, q)
+
+	var out = fmt.Sprintf("__There are %d Quotes, displaying quotes from index %d to %d:__\n", len(quo.List), before, after-1)
+
+	for i := before; i < ind; i++ {
+		out = appendQuote(out, i, quo.List[i])
+	}
+
+	for i := ind; i < after; i++ {
+		out = appendQuote(out, i, quo.List[i])
 	}
 
 	return commands.NewSimpleSend(msg.ChannelID, out), nil
@@ -506,4 +502,37 @@ func (q *quoteSearch) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) 
 	}
 
 	return commands.NewSimpleSend(msg.ChannelID, out), nil
+}
+
+type quoteClean struct {
+	nilCommand
+}
+
+func newQuoteClean() *quoteClean { return &quoteClean{} }
+
+func (q *quoteClean) Aliases() []string { return []string{"quote clean", "quote cl"} }
+
+func (q *quoteClean) Desc() string { return "Replaces `\\n` characters with newlines." }
+
+func (q *quoteClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
+	// Get quotes list
+	var quo quotes
+	err := commands.DBGet(&quotes{}, keyQuotes, &quo)
+	if err == commands.ErrDBNotFound {
+		return nil, ErrQuoteEmpty
+	} else if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < len(quo.List); i++ {
+		quo.List[i] = strings.ReplaceAll(quo.List[i], `\n`, "\n")
+	}
+
+	// Set quotes
+	_, _, err = commands.DBSet(&quo, keyQuotes)
+	if err != nil {
+		return nil, err
+	}
+
+	return commands.NewSimpleSend(msg.ChannelID, "All Clean! ✨"), nil
 }
