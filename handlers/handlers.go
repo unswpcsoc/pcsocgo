@@ -34,6 +34,7 @@ func init() {
 	crt.AddCommand(newQuoteRemove())
 	crt.AddCommand(newQuoteReject())
 	crt.AddCommand(newQuoteSearch())
+	crt.AddCommand(newQuoteClean())
 
 	crt.AddCommand(newRole("Bookworm"))
 	crt.AddCommand(newRole("Meta"))
@@ -87,9 +88,14 @@ func InitLogs(ses *discordgo.Session) {
 	initArchive(ses)
 }
 
-// InitDaemons inits all daemons, returns a slice of channels to close when done
-func InitDaemons(ses *discordgo.Session) []chan bool {
-	ret := []chan bool{}
-	ret = append(ret, initClean(ses))
-	return ret
+// InitDaemons inits all daemons, returns a function to close all channels when done
+func InitDaemons(ses *discordgo.Session) (Close func()) {
+	chans := []chan bool{}
+	chans = append(chans, initClean(ses))
+	return func() {
+		// signal all channels on close
+		for _, ch := range chans {
+			ch <- true
+		}
+	}
 }
