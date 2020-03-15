@@ -257,7 +257,7 @@ func newQuoteList() *quoteList { return &quoteList{} }
 func (q *quoteList) Aliases() []string { return []string{"quote list", "quote ls"} }
 
 func (q *quoteList) Desc() string {
-	return "Lists a range of approved quotes. Specify an index to look around it (defaults to 10)."
+	return fmt.Sprintf("Lists a range of approved quotes. Specify an index to look around it (defaults to %d).", quoteListLimit/2)
 }
 
 func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
@@ -271,7 +271,7 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		return nil, err
 	}
 
-	ind := 10
+	ind := quoteListLimit / 2
 	if len(quo.List) < ind {
 		ind = 0
 	}
