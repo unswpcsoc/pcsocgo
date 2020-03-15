@@ -1,3 +1,3 @@
 #!/bin/sh
 
-go run cmd/pcsocbot/pcsocbot.go $@
+go run cmd/main/main.go $@
