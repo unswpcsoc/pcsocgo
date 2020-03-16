@@ -32,7 +32,7 @@ const (
 	addTimeout = 7
 
 	// PCSoc
-	cleanChannelID = "543714149536890883"
+	cleanChannelID = "213662770724339712"
 	cleanGuildID   = "157263595128881153"
 
 	// PCSoc2
