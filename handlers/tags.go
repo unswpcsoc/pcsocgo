@@ -903,7 +903,8 @@ func initClean(ses *discordgo.Session) chan bool {
 	done := make(chan bool)
 
 	doClean := func() {
-		if time.Now().Hour() == 2 {
+		// AEST = GMT+11
+		if time.Now().Hour() == 2+11 {
 			// call handler
 			logs.Println("Calling tagsClean handler")
 			cmd := &tagsClean{}
