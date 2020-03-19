@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -19,10 +20,13 @@ const (
 	keyPending = "pending"
 	keyQuotes  = "approve"
 
-	quoteLineLimit = 80
-	quoteListLimit = 10
+	quoteListLineLimit = 80
+	quoteListLimit     = 15
 
 	searchLimit = 5
+
+	emojiLeft  = "leee:690176095433392149"
+	emojiRight = "reee:468260188500131850"
 )
 
 var (
@@ -249,7 +253,6 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 
 type quoteList struct {
 	nilCommand
-	Index []int `arg:"lookaround"`
 }
 
 func newQuoteList() *quoteList { return &quoteList{} }
@@ -271,58 +274,105 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		return nil, err
 	}
 
-	ind := quoteListLimit / 2
-	if len(quo.List) < ind {
-		ind = 0
-	}
-
-	// check if user specified an index
-	if len(q.Index) > 0 {
-		// Check index
-		if q.Index[0] < 0 || q.Index[0] >= len(quo.List) {
-			return nil, ErrQuoteIndex
+	timer := time.NewTimer(2 * time.Minute)
+	go func() {
+		// send a message first
+		out := utils.Under("Quotes of UNSW PCSoc")
+		for i, quote := range quo.List[0:quoteListLimit] {
+			out += fmt.Sprintf("\n**#%d:** %s", i, quote)
 		}
-		ind = q.Index[0]
-	}
+		out += "\n`Page 0`"
 
-	// closure so we don't have to repeat this logic
-	appendQuote := func(buf string, i int, quote string) string {
-		// deleted quote, skip
-		if len(quote) == 0 {
-			return buf
+		// send initial message
+		outMessage, err := ses.ChannelMessageSend(msg.ChannelID, out)
+		if err != nil {
+			return
 		}
 
-		if len(quote) > quoteLineLimit {
-			quote = quote[:quoteLineLimit] + "[...]"
+		// react with left and right emojis
+		err = ses.MessageReactionAdd(msg.ChannelID, outMessage.ID, emojiLeft)
+		if err != nil {
+			return
 		}
 
-		// don't worry about message limit, won't be reached
-		buf += fmt.Sprintf("**#%d:** %s\n", i, quote)
-		return buf
-	}
+		err = ses.MessageReactionAdd(msg.ChannelID, outMessage.ID, emojiRight)
+		if err != nil {
+			return
+		}
 
-	// List away!
-	before := ind - (quoteListLimit / 2)
-	if before < 0 {
-		before = 0
-	}
+		// keep state of message
+		page := 0
+		unregister := ses.AddHandler(func(innerSes *discordgo.Session, event *discordgo.MessageReactionAdd) {
+			reaction := event.MessageReaction
 
-	after := ind + (quoteListLimit / 2) + 1
-	if after >= len(quo.List) {
-		after = len(quo.List)
-	}
+			// listen for reactions on the specific message sent
+			if reaction.MessageID != outMessage.ID || reaction.UserID == outMessage.Author.ID {
+				return
+			}
 
-	var out = fmt.Sprintf("__There are %d Quotes, displaying quotes from index %d to %d:__\n", len(quo.List), before, after-1)
+			// ignore non-control emoji
+			reactEmoji := reaction.Emoji.APIName()
+			if reactEmoji != emojiLeft && reactEmoji != emojiRight {
+				return
+			}
 
-	for i := before; i < ind; i++ {
-		out = appendQuote(out, i, quo.List[i])
-	}
+			// remove the reaction made by the user
+			err := innerSes.MessageReactionRemove(
+				reaction.ChannelID,
+				reaction.MessageID,
+				reaction.Emoji.APIName(),
+				reaction.UserID,
+			)
+			if err != nil {
+				return
+			}
 
-	for i := ind; i < after; i++ {
-		out = appendQuote(out, i, quo.List[i])
-	}
+			// do nothing when going beyond page limits
+			if reactEmoji == emojiLeft && page == 0 {
+				return
+			}
 
-	return commands.NewSimpleSend(msg.ChannelID, out), nil
+			// N (2+1)=3 >= Ceil(20/10)=2		| 10 10
+			// Y (2+1)=3 >= Ceil(21/10)=3 	| 10 10 1
+			if reactEmoji == emojiRight && page+1 >= int(math.Ceil(float64(len(quo.List))/float64(quoteListLimit))) {
+				return
+			}
+
+			if reactEmoji == emojiLeft {
+				page--
+			}
+
+			if reactEmoji == emojiRight {
+				page++
+			}
+
+			// calculate bounds
+			left := page * quoteListLimit
+			right := (page + 1) * quoteListLimit
+			if right > len(quo.List) {
+				right = len(quo.List)
+			}
+
+			// construct edit message
+			edit := utils.Under("Quotes of UNSW PCSoc")
+			for i, quote := range quo.List[left:right] {
+				edit += fmt.Sprintf("\n**#%d:** %s", i+left, quote)
+			}
+			edit += fmt.Sprintf("\n`Page %d`", page)
+
+			// actually edit the damn message
+			innerSes.ChannelMessageEdit(reaction.ChannelID, reaction.MessageID, edit)
+
+			// yeet
+		})
+
+		// wait until the timer is done, then unregister the handler
+		<-timer.C
+		fmt.Println("Unregistered message ID", outMessage.ID)
+		unregister()
+	}()
+
+	return nil, nil
 }
 
 type quotePending struct {
