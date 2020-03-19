@@ -25,8 +25,9 @@ const (
 
 	searchLimit = 5
 
-	emojiLeft  = "leee:690176095433392149"
-	emojiRight = "reee:468260188500131850"
+	// ��
+	emojiLeft  = "jrleft:681465381298503802"
+	emojiRight = "jrright:681465381356961827"
 )
 
 var (
