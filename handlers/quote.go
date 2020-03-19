@@ -280,7 +280,9 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		// send a message first
 		out := utils.Under("Quotes of UNSW PCSoc")
 		for i, quote := range quo.List[0:quoteListLimit] {
-			out += fmt.Sprintf("\n**#%d:** %s", i, quote)
+			if quote != "" {
+				out += fmt.Sprintf("\n**#%d:** %s", i, quote)
+			}
 		}
 		out += "\n`Page 0`"
 
@@ -357,7 +359,9 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 			// construct edit message
 			edit := utils.Under("Quotes of UNSW PCSoc")
 			for i, quote := range quo.List[left:right] {
-				edit += fmt.Sprintf("\n**#%d:** %s", i+left, quote)
+				if quote != "" {
+					edit += fmt.Sprintf("\n**#%d:** %s", i+left, quote)
+				}
 			}
 			edit += fmt.Sprintf("\n`Page %d`", page)
 
