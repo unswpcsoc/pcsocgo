@@ -116,8 +116,6 @@ func main() {
 		if argv[0] == "!" {
 			com, ok = lastCom[m.Message.Author.ID]
 			if !ok {
-				out := utils.Italics("Error: You haven't issued any commands yet!")
-				s.ChannelMessageSend(m.ChannelID, out)
 				return
 			}
 			// !! args...
