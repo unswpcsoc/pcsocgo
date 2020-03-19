@@ -126,28 +126,6 @@ func main() {
 			// regular routing
 			com, ind = handlers.RouterRoute(argv)
 			if com == nil {
-				/* REDACTED
-				mat := fuzzy.Find(strings.Join(argv, " "), handlers.RouterToStringSlice())
-
-				var out string
-				if len(mat) > 0 {
-					out = utils.Italics("Error: Unknown command, did you mean:") + "\n"
-
-					// fuzzy find suggestions
-					for i, m := range mat {
-						// only get 3 suggestions at most
-						if i == 3 {
-							break
-						}
-						out += utils.Code(commands.Prefix+m.Str) + "\n"
-					}
-				} else {
-					out = utils.Italics("Error: Unknown command") + "\n"
-				}
-
-				out += utils.Italics("Use") + " " + commands.Prefix + utils.Code(handlers.HelpAlias) + " " + utils.Italics("for more.")
-				s.ChannelMessageSend(m.ChannelID, out)
-				*/
 				return
 			}
 		}
@@ -211,10 +189,12 @@ func main() {
 			return
 		}
 
-		// send message
-		err = snd.Send(s)
-		if err != nil {
-			errs.Printf("Send error: %#v\n", err)
+		// send returned message
+		if snd != nil {
+			err = snd.Send(s)
+			if err != nil {
+				errs.Printf("Send error: %#v\n", err)
+			}
 		}
 
 		// clean up args
