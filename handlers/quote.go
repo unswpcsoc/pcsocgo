@@ -28,6 +28,8 @@ const (
 	// ��
 	emojiLeft  = "jrleft:681465381298503802"
 	emojiRight = "jrright:681465381356961827"
+	//emojiLeft  = "leee:690176095433392149"
+	//emojiRight = "reee:468260188500131850"
 )
 
 var (
@@ -277,6 +279,13 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 
 	timer := time.NewTimer(2 * time.Minute)
 	go func() {
+		// keep state of message
+		page := 0
+		// pages are indexed at 0
+		// Ceil(30/15)-1 = 1		| 15 15
+		// Ceil(31/15)-1 = 2 		| 15 15 1
+		lastPage := int(math.Ceil(float64(len(quo.List))/float64(quoteListLimit))) - 1
+
 		// send a message first
 		out := utils.Under("Quotes of UNSW PCSoc")
 		for i, quote := range quo.List[0:quoteListLimit] {
@@ -284,7 +293,7 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 				out += fmt.Sprintf("\n**#%d:** %s", i, quote)
 			}
 		}
-		out += "\n`Page 0`"
+		out += fmt.Sprintf("\n`Page 0/%d`", lastPage)
 
 		// send initial message
 		outMessage, err := ses.ChannelMessageSend(msg.ChannelID, out)
@@ -303,8 +312,6 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 			return
 		}
 
-		// keep state of message
-		page := 0
 		unregister := ses.AddHandler(func(innerSes *discordgo.Session, event *discordgo.MessageReactionAdd) {
 			reaction := event.MessageReaction
 
@@ -330,22 +337,15 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 				return
 			}
 
-			// do nothing when going beyond page limits
 			if reactEmoji == emojiLeft && page == 0 {
-				return
-			}
-
-			// N (2+1)=3 >= Ceil(20/10)=2		| 10 10
-			// Y (2+1)=3 >= Ceil(21/10)=3 	| 10 10 1
-			if reactEmoji == emojiRight && page+1 >= int(math.Ceil(float64(len(quo.List))/float64(quoteListLimit))) {
-				return
-			}
-
-			if reactEmoji == emojiLeft {
+				page = lastPage
+			} else if reactEmoji == emojiLeft {
 				page--
 			}
 
-			if reactEmoji == emojiRight {
+			if reactEmoji == emojiRight && page+1 > lastPage {
+				page = 0
+			} else if reactEmoji == emojiRight {
 				page++
 			}
 
@@ -363,17 +363,19 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 					edit += fmt.Sprintf("\n**#%d:** %s", i+left, quote)
 				}
 			}
-			edit += fmt.Sprintf("\n`Page %d`", page)
+			edit += fmt.Sprintf("\n`Page %d/%d`", page, lastPage)
 
 			// actually edit the damn message
 			innerSes.ChannelMessageEdit(reaction.ChannelID, reaction.MessageID, edit)
 
-			// yeet
 		})
 
-		// wait until the timer is done, then unregister the handler
+		// wait until the timer is done, then unregister the handler and the reactions
 		<-timer.C
-		fmt.Println("Unregistered message ID", outMessage.ID)
+
+		// yeet
+		ses.MessageReactionsRemoveAll(msg.ChannelID, outMessage.ID)
+		ses.MessageReactionsRemoveAll(msg.ChannelID, outMessage.ID)
 		unregister()
 	}()
 
