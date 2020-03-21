@@ -68,6 +68,6 @@ func main() {
 	}
 
 	// commit to the db
-	commands.DBSet(tgs, tagsKey)
+	commands.DBSet(&tgs, tagsKey)
 	log.Println("Committed changes")
 }
