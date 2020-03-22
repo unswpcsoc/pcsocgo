@@ -227,20 +227,6 @@ func (t *tagsAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 		// acknowledge reaction
 		ses.ChannelMessageSend(msg.ChannelID, "Creating new platform: "+utils.Code(t.Platform))
 
-		/* role
-		// create new role
-		drl, err = ses.GuildRoleCreate(msg.GuildID)
-		if err != nil {
-			return nil, err
-		}
-
-		// edit the role
-		ses.GuildRoleEdit(msg.GuildID, drl.ID, t.Platform, teal, false, drl.Permissions, true)
-
-		// signal role creation
-		ses.ChannelMessageSend(msg.ChannelID, "Creating a new role: "+drl.Mention())
-		*/
-
 		// create new platform
 		plt = &platform{
 			Name:  t.Platform,
@@ -250,21 +236,13 @@ func (t *tagsAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 		tgs.Platforms[t.Platform] = plt
 	}
 
-	/* opt-in pings
-	// signal role giving
-	ses.ChannelMessageSend(msg.ChannelID, "Giving you the role...")
-
-	// set role, silently fails
-	ses.GuildMemberRoleAdd(msg.GuildID, msg.Author.ID, plt.Role.ID)
-	*/
-
 	// add tag to platform
 	plt.Users[msg.Author.ID] = &tag{
 		UID:      msg.Author.ID,
 		Username: msg.Author.Username,
 		Tag:      argTag,
 		Platform: t.Platform,
-		PingMe:   false, // opt-in pings
+		PingMe:   true, // opt-out
 	}
 
 	// set tags
@@ -609,6 +587,51 @@ func (t *tagsPing) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 	pings = utils.Bold(plt.Name) + pings + "\n" + strings.Join(t.Message, " ")
 
 	return out.Message(pings), nil
+}
+
+type tagsShutup struct {
+	nilCommand
+}
+
+func newTagsShutup() *tagsShutup { return &tagsShutup{} }
+
+func (t *tagsShutup) Aliases() []string { return []string{"tags shutup", "shutup", "shut up", "stfu"} }
+
+func (t *tagsShutup) Desc() string { return "Stop pings from tags" }
+
+func (t *tagsShutup) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
+	var err error
+	var tgs tagStorer
+
+	// lock the db
+	commands.DBLock()
+	defer commands.DBUnlock()
+
+	// get all tags
+	err = commands.DBGet(&tgs, tagsKey, &tgs)
+	if err == commands.ErrDBNotFound {
+		return nil, ErrNoTags
+	} else if err != nil {
+		return nil, err
+	}
+
+	// iterate platforms
+	for _, plt := range tgs.Platforms {
+		tag, ok := plt.Users[msg.Author.ID]
+		if !ok {
+			continue
+		}
+		// :unping:
+		tag.PingMe = false
+		plt.Users[msg.Author.ID] = tag
+	}
+
+	_, _, err = commands.DBSet(&tgs, tagsKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return commands.NewSimpleSend(msg.ChannelID, "You will no longer receive pings for tags"), nil
 }
 
 type tagsPingMe struct {
