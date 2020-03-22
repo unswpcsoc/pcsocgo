@@ -107,6 +107,7 @@ func (t *tags) Subcommands() []commands.Command {
 		newTagsPing(),
 		newTagsPingMe(),
 		newTagsRemove(),
+		newTagsShutup(),
 		newTagsUser(),
 	}
 }
