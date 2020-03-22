@@ -50,6 +50,7 @@ func init() {
 	crt.AddCommand(newTagsPingMe())
 	crt.AddCommand(newTagsPlatforms())
 	crt.AddCommand(newTagsRemove())
+	crt.AddCommand(newTagsShutup())
 	crt.AddCommand(newTagsUser())
 
 	crt.AddCommand(newArchive())
@@ -60,6 +61,9 @@ func init() {
 
 	crt.AddCommand(newScream())
 
+	//crt.AddCommand(newRules())
+	//crt.AddCommand(newRulesGet())
+	//crt.AddCommand(newRulesSet())
 }
 
 // RouterRoute is a wrapper around the handler package's internal router's Route method
