@@ -678,16 +678,6 @@ func (t *tagsPingMe) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 	// set pingme
 	utg.PingMe = t.PingMe
 
-	/* roles
-	if t.PingMe {
-		// TODO: fix this shit
-		// set role, silently fails
-		ses.GuildMemberRoleAdd(msg.GuildID, msg.Author.ID, plt.Role.ID)
-	} else {
-		// remove role, silently fails
-		ses.GuildMemberRoleRemove(msg.GuildID, msg.Author.ID, plt.Role.ID)
-	}
-	*/
 	_, _, err = commands.DBSet(&tgs, tagsKey)
 	if err != nil {
 		return nil, err
@@ -736,7 +726,7 @@ func (t *tagsRemove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 	}
 
 	// get tag
-	_, ok := plt.Users[msg.Author.ID]
+	_, ok = plt.Users[msg.Author.ID]
 	if !ok {
 		return nil, ErrNoUser
 	}
