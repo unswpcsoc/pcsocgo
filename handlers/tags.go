@@ -736,7 +736,7 @@ func (t *tagsRemove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 	}
 
 	// get tag
-	utg, ok := plt.Users[msg.Author.ID]
+	_, ok := plt.Users[msg.Author.ID]
 	if !ok {
 		return nil, ErrNoUser
 	}
