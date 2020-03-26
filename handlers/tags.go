@@ -741,11 +741,6 @@ func (t *tagsRemove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 		return nil, ErrNoUser
 	}
 
-	if utg.PingMe {
-		// remove role, silently fails
-		ses.GuildMemberRoleRemove(msg.GuildID, msg.Author.ID, plt.Role.ID)
-	}
-
 	// remove the tag
 	delete(plt.Users, msg.Author.ID)
 	out.Message("Removed your tag from " + utils.Code(t.Platform))
