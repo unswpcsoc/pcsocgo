@@ -169,8 +169,8 @@ func (t *tagsAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 	if !ok {
 		// wait for user reaction to verify
 		war, _ := ses.ChannelMessageSend(msg.ChannelID,
-			fmt.Sprintf("Warning: Creating a new platform. Make sure you check if a similar one exists.\n"+
-				"React to confirm this action. You have %d seconds to confirm.", addTimeout))
+			fmt.Sprintf("Warning: Creating new platform %s. Make sure you check if a similar one exists.\n"+
+				"React to confirm this action. You have %d seconds to confirm.", t.Platform, addTimeout))
 
 		// react to the message to get things going
 		err = ses.MessageReactionAdd(war.ChannelID, war.ID, emojiConfirm)
@@ -884,11 +884,8 @@ func (t *tagsModRemove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message
 	}
 
 	// iterate platforms
-	for pname, plt := range tgs.Platforms {
+	for pname, _ := range tgs.Platforms {
 		if pname == t.Platform {
-			// remove the role from guild, fails silently
-			ses.GuildRoleDelete(msg.GuildID, plt.Role.ID)
-
 			// remove the platform
 			delete(tgs.Platforms, pname)
 
