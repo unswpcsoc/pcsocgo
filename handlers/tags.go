@@ -169,8 +169,8 @@ func (t *tagsAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 	if !ok {
 		// wait for user reaction to verify
 		war, _ := ses.ChannelMessageSend(msg.ChannelID,
-			fmt.Sprintf("Warning: Creating new platform %s. Make sure you check if a similar one exists.\n"+
-				"React to confirm this action. You have %d seconds to confirm.", t.Platform, addTimeout))
+			fmt.Sprintf("Creating new platform **%s**.\n__Please check if a similar one exists.__\n"+
+				"Confirm adding in %d seconds.", t.Platform, addTimeout))
 
 		// react to the message to get things going
 		err = ses.MessageReactionAdd(war.ChannelID, war.ID, emojiConfirm)
