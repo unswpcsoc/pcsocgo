@@ -183,6 +183,11 @@ func (t *tagsAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 			return nil, err
 		}
 
+		// remove all reactions when done
+		defer func() {
+			ses.MessageReactionsRemoveAll(war.ChannelID, war.ID)
+		}()
+
 		// spin up goroutine to check if message has been reacted
 		reaction := make(chan bool)
 		go func() {
