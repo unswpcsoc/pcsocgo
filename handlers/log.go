@@ -347,11 +347,13 @@ func initFil(ses *discordgo.Session) {
 		}
 
 		bad := false
+		matchString := ""
 		// check for BAD WORDS
 		for _, bw := range badWords {
 			if bw.MatchString(msg.Content) {
 				// bad word detected
 				bad = true
+				matchString = bw.String()
 				break
 			}
 		}
@@ -362,6 +364,11 @@ func initFil(ses *discordgo.Session) {
 
 		// craft fields
 		fields := []*discordgo.MessageEmbedField{
+			&discordgo.MessageEmbedField{
+				Name:   "Matched regex:",
+				Value:  matchString,
+				Inline: false,
+			},
 			&discordgo.MessageEmbedField{
 				Name:   "Content:",
 				Value:  msg.Content,
@@ -376,7 +383,7 @@ func initFil(ses *discordgo.Session) {
 		}
 
 		se.ChannelMessageSendEmbed(logChannel, &discordgo.MessageEmbed{
-			Title: "Bad Word Detected in: " + cha.Name,
+			Title: "Bad Word Detected in " + cha.Name,
 			Author: &discordgo.MessageEmbedAuthor{
 				IconURL: msg.Author.AvatarURL(""),
 				Name:    msg.Author.String(),
