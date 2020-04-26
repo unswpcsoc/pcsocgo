@@ -6,6 +6,7 @@ import (
 	logs "log"
 	"net/http"
 	"regexp"
+
 	//"strconv"
 	"strings"
 
@@ -31,7 +32,13 @@ var (
 		regexp.MustCompile("(?i)kill[[:space:]]*myself"),
 		regexp.MustCompile("(?i)kill[[:space:]]*me"),
 		regexp.MustCompile("(?i)retard"),
-		regexp.MustCompile("(?i)nigger"),
+		regexp.MustCompile("(?i)ni..er"),
+		regexp.MustCompile("(?i)ni..a"),
+		regexp.MustCompile("(?i)autis"),
+		regexp.MustCompile("(?i)nang"),
+		regexp.MustCompile("(?i)my[[:space:]]address[[:space:]]is"),
+		regexp.MustCompile("(?i)i[[:space:]]want[[:space:]]to[[:space:]]jump[[:space:]]off[[:space:]]a[[:space:]]tall[[:space:]]building[[:space:]]and[[:space:]]splatter[[:space:]]into[[:space:]]a[[:space:]]million[[:space:]]pieces"),
+		regexp.MustCompile("(?i)suck[[:space:]]my[[:space:]]left[[:space:]]nut"),
 	}
 
 	ErrLoggingOn  = errors.New("logging is already on")
@@ -362,8 +369,14 @@ func initFil(ses *discordgo.Session) {
 			},
 		}
 
+		cha, err := ses.State.Channel(mc.Message.ChannelID)
+		if err != nil {
+			logs.Println(err)
+			return
+		}
+
 		se.ChannelMessageSendEmbed(logChannel, &discordgo.MessageEmbed{
-			Title: "Bad Word Detected",
+			Title: "Bad Word Detected in: " + cha.Name,
 			Author: &discordgo.MessageEmbedAuthor{
 				IconURL: msg.Author.AvatarURL(""),
 				Name:    msg.Author.String(),
