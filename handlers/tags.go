@@ -25,7 +25,7 @@ const (
 	tagsKey          = "fulltags"
 	teal             = 0x008080
 
-	tagLimit  = 32
+	tagLimit  = 64
 	platLimit = 20
 	userLimit = 20 // discord's nick limit is 32
 
@@ -88,6 +88,7 @@ func (t *tagStorer) Index() string { return "tags" }
 
 type tags struct {
 	nilCommand
+	Platform string `arg:"platform"`
 }
 
 func newTags() *tags { return &tags{} }
@@ -113,7 +114,73 @@ func (t *tags) Subcommands() []commands.Command {
 }
 
 func (t *tags) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
-	return commands.NewSimpleSend(msg.ChannelID, commands.GetUsage(t)), nil
+	// attempt to lookup platform first before routing to help message
+	var err error
+	var tgs tagStorer
+
+	err = commands.DBGet(&tgs, tagsKey, &tgs)
+	if err == commands.ErrDBNotFound {
+		return nil, ErrNoTags
+	} else if err != nil {
+		return nil, err
+	}
+
+	plt, ok := tgs.Platforms[t.Platform]
+	if !ok {
+		return commands.NewSimpleSend(msg.ChannelID, commands.GetUsage(t)), nil
+	}
+
+	list := fmt.Sprintf(fmt.Sprintf("Ping? | %%-%ds | %%s\n", platLimit), "User", "Tag")
+	for i := range list {
+		if i == 6 || i == platLimit+9 {
+			list += "+"
+		} else {
+			list += "-"
+		}
+	}
+	list += "\n"
+
+	// update usernames
+	utags := []*tag{}
+	for _, utg := range plt.Users {
+		mem, err := ses.State.Member(msg.GuildID, utg.UID)
+		if err != nil {
+			utags = append(utags, nil)
+			continue
+		}
+		utg.Username = mem.User.Username
+		utags = append(utags, utg)
+	}
+
+	sort.Slice(utags, func(i, j int) bool {
+		// move nils to the end
+		if utags[i] == nil {
+			return false
+		}
+
+		if strings.Compare(utags[i].Username, utags[i].Username) < 0 {
+			return true
+		}
+		return false
+	})
+
+	// generate output
+	for _, utg := range utags {
+		if utg == nil {
+			// signal invalid users in the db
+			list += fmt.Sprintf(fmt.Sprintf("%%-%dt | %%-%ds | %%s\n", 5, userLimit),
+				false, "[INVALID]", "!tags clean")
+		} else {
+			ind := len(utg.Username)
+			if len(utg.Username) > userLimit {
+				ind = userLimit
+			}
+			list += fmt.Sprintf(fmt.Sprintf("%%-%dt | %%-%ds | %%s\n", 5, userLimit),
+				utg.PingMe, utg.Username[0:ind], utg.Tag)
+		}
+	}
+
+	return commands.NewSimpleSend(msg.ChannelID, t.Platform+"'s tags:\n"+utils.Block(list)), nil
 }
 
 type tagsAdd struct {
@@ -137,11 +204,11 @@ func (t *tagsAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 		return nil, errors.New("please provide a tag")
 	}
 	argTag := strings.Join(t.Tag, " ")
-	if len(argTag) > 30 {
+	if len(argTag) > tagLimit {
 		return nil, ErrTagTooLong
 	}
 
-	if len(t.Platform) > 30 {
+	if len(t.Platform) > platLimit {
 		return nil, ErrPlatTooLong
 	}
 
@@ -448,13 +515,6 @@ func (t *tagsList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 	for _, utg := range plt.Users {
 		mem, err := ses.State.Member(msg.GuildID, utg.UID)
 		if err != nil {
-			/* expensive
-			mem, err = ses.GuildMember(msg.GuildID, utg.UID)
-			if err != nil {
-				utags = append(utags, nil)
-				continue
-			}
-			*/
 			utags = append(utags, nil)
 			continue
 		}
@@ -573,14 +633,6 @@ func (t *tagsPing) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 
 	pings := ""
 	for _, utg := range plt.Users {
-		/* slow
-		var dusr *discordgo.User
-		dusr, err = ses.User(utg.UID)
-		if err != nil || !utg.PingMe {
-			continue
-		}
-		pings += " " + dusr.Mention()
-		*/
 		if utg.PingMe {
 			pings += " " + utils.Mention(utg.UID)
 		}
