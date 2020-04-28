@@ -583,7 +583,7 @@ func (t *tagsPlatforms) MsgHandle(ses *discordgo.Session, msg *discordgo.Message
 
 	// sort platforms
 	sort.Slice(plats, func(i, j int) bool {
-		if strings.Compare(plats[i].Name, plats[j].Name) < 0 {
+		if strings.Compare(strings.ToLower(plats[i].Name), strings.ToLower(plats[j].Name)) < 0 {
 			return true
 		}
 		return false
