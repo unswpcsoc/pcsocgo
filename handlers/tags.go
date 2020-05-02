@@ -300,15 +300,10 @@ func (t *tagsClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		return nil, err
 	}
 
-	out := "Starting cleaning session! This may take a while, delete this message to stop cleaning... "
-	got, _ := ses.ChannelMessageSend(msg.ChannelID, out)
-	editableID := got.ID
-
 	// cache already seen uids
 	checkMap := make(map[string]bool)
 
 	// iterate platforms
-	progress := 0
 	for pname, plt := range tgs.Platforms {
 		// clean empty platforms
 		if len(plt.Users) == 0 || len(plt.Name) == 0 {
@@ -350,16 +345,6 @@ func (t *tagsClean) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 
 			// update cache
 			checkMap[uid] = true
-		}
-
-		// update progress
-		progress++
-
-		progressString := fmt.Sprintf("`%03d%% | (%d/%d Platforms)`\n", 100*progress/len(tgs.Platforms), progress, len(tgs.Platforms))
-		_, err := ses.ChannelMessageEdit(msg.ChannelID, editableID, out+progressString)
-		if err != nil {
-			logs.Println("tagsClean -> ChannelMessageEdit:", err)
-			return commands.NewSimpleSend(msg.ChannelID, "Cancelled clean, no changes committed"), nil
 		}
 	}
 
