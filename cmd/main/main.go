@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -13,7 +14,6 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-	//"github.com/sahilm/fuzzy"
 
 	"github.com/unswpcsoc/pcsocgo/commands"
 	"github.com/unswpcsoc/pcsocgo/handlers"
@@ -38,14 +38,22 @@ func init() {
 	flag.Parse()
 }
 
-// discordgo init
-func init() {
+func main() {
+	// logger init
+	fp, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Println("Error opening logging file:", err)
+	} else {
+		defer fp.Close()
+		log.SetOutput(io.MultiWriter(os.Stdout, fp))
+	}
+
+	// discordgo init
 	key, ok := os.LookupEnv("KEY")
 	if !ok {
 		errs.Fatalln("Missing Discord API Key: Set env var $KEY")
 	}
 
-	var err error
 	dgo, err = discordgo.New("Bot " + key)
 	if err != nil {
 		errs.Fatalln(err)
@@ -59,11 +67,9 @@ func init() {
 	dgo.SyncEvents = sync
 
 	log.Printf("Logged in as: %v\nSyncEvents is %v", dgo.State.User.ID, dgo.SyncEvents)
-}
+	defer dgo.Close()
 
-// db init
-func init() {
-	var err error
+	// db init
 	if prod {
 		err = commands.DBOpen("./bot.db")
 	} else {
@@ -72,10 +78,6 @@ func init() {
 	if err != nil {
 		errs.Fatalln(err)
 	}
-}
-
-func main() {
-	defer dgo.Close()
 	defer commands.DBClose()
 
 	dgo.UpdateStatus(0, commands.Prefix+handlers.HelpAlias)
