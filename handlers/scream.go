@@ -17,7 +17,9 @@ type scream struct {
 
 func newScream() *scream { return &scream{} }
 
-func (s *scream) Aliases() []string { return []string{"scream"} }
+func (s *scream) Aliases() []string {
+	return []string{"scream", "curry", "curryant", "roomba", "ruby", "a"}
+}
 
 func (s *scream) Desc() string { return "AAAAAAAAAAAAAAAA" }
 
