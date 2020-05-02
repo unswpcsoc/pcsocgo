@@ -9,71 +9,71 @@ import (
 	"github.com/unswpcsoc/pcsocgo/internal/router"
 )
 
-var crt *router.Router
+var commandRouter *router.Router
 
 func init() {
-	crt = router.NewRouter()
+	commandRouter = router.NewRouter()
 
-	crt.AddCommand(newDecimalSpiral())
+	commandRouter.AddCommand(newDecimalSpiral())
 
-	crt.AddCommand(newEcho())
+	commandRouter.AddCommand(newEcho())
 
-	crt.AddCommand(newHelp())
+	commandRouter.AddCommand(newHelp())
 
-	crt.AddCommand(newLog())
-	crt.AddCommand(newLogDelete())
-	crt.AddCommand(newLogFilter())
+	commandRouter.AddCommand(newLog())
+	commandRouter.AddCommand(newLogDelete())
+	commandRouter.AddCommand(newLogFilter())
 
-	crt.AddCommand(newPing())
+	commandRouter.AddCommand(newPing())
 
-	crt.AddCommand(newQuote())
-	crt.AddCommand(newQuoteAdd())
-	crt.AddCommand(newQuoteApprove())
-	crt.AddCommand(newQuoteList())
-	crt.AddCommand(newQuotePending())
-	crt.AddCommand(newQuoteRemove())
-	crt.AddCommand(newQuoteReject())
-	crt.AddCommand(newQuoteSearch())
-	crt.AddCommand(newQuoteClean())
+	commandRouter.AddCommand(newQuote())
+	commandRouter.AddCommand(newQuoteAdd())
+	commandRouter.AddCommand(newQuoteApprove())
+	commandRouter.AddCommand(newQuoteList())
+	commandRouter.AddCommand(newQuotePending())
+	commandRouter.AddCommand(newQuoteRemove())
+	commandRouter.AddCommand(newQuoteReject())
+	commandRouter.AddCommand(newQuoteSearch())
+	commandRouter.AddCommand(newQuoteClean())
 
-	crt.AddCommand(newRole("Bookworm"))
-	crt.AddCommand(newRole("Meta"))
-	crt.AddCommand(newRole("Weeb"))
+	commandRouter.AddCommand(newRole("Bookworm"))
+	commandRouter.AddCommand(newRole("Meta"))
+	commandRouter.AddCommand(newRole("Weeb"))
 
-	crt.AddCommand(newTags())
-	crt.AddCommand(newTagsAdd())
-	crt.AddCommand(newTagsClean())
-	crt.AddCommand(newTagsGet())
-	crt.AddCommand(newTagsList())
-	crt.AddCommand(newTagsModRemove())
-	crt.AddCommand(newTagsPing())
-	crt.AddCommand(newTagsPingMe())
-	crt.AddCommand(newTagsPlatforms())
-	crt.AddCommand(newTagsRemove())
-	crt.AddCommand(newTagsShutup())
-	crt.AddCommand(newTagsUser())
+	commandRouter.AddCommand(newTags())
+	commandRouter.AddCommand(newTagsAdd())
+	commandRouter.AddCommand(newTagsClean())
+	commandRouter.AddCommand(newTagsGet())
+	commandRouter.AddCommand(newTagsList())
+	commandRouter.AddCommand(newTagsModRemove())
+	commandRouter.AddCommand(newTagsPing())
+	commandRouter.AddCommand(newTagsPingMe())
+	commandRouter.AddCommand(newTagsPlatforms())
+	commandRouter.AddCommand(newTagsRemove())
+	commandRouter.AddCommand(newTagsShutup())
+	commandRouter.AddCommand(newTagsUser())
 
-	crt.AddCommand(newArchive())
+	commandRouter.AddCommand(newArchive())
 
-	crt.AddCommand(newStaticIce())
+	commandRouter.AddCommand(newStaticIce())
 
-	crt.AddCommand(newHandbook())
+	commandRouter.AddCommand(newHandbook())
 
-	crt.AddCommand(newScream())
+	commandRouter.AddCommand(newScream())
 
-	//crt.AddCommand(newRules())
-	//crt.AddCommand(newRulesGet())
-	//crt.AddCommand(newRulesSet())
+	//commandRouter.AddCommand(newRules())
+	//commandRouter.AddCommand(newRulesGet())
+	//commandRouter.AddCommand(newRulesSet())
 }
 
 // RouterRoute is a wrapper around the handler package's internal router's Route method
-func RouterRoute(argv []string) (commands.Command, int) { return crt.Route(argv) }
+func RouterRoute(argv []string) (commands.Command, int) { return commandRouter.Route(argv) }
 
 // RouterToSlice is a wrapper around the blah blah blah's ToSlice method
-func RouterToSlice() []commands.Command { return crt.ToSlice() }
+func RouterToSlice() []commands.Command { return commandRouter.ToSlice() }
 
 // RouterToStringSlice is a wrapper around the blah blah blah's ToStringSlice method
-func RouterToStringSlice() []string { return crt.ToStringSlice() }
+func RouterToStringSlice() []string { return commandRouter.ToStringSlice() }
 
 // nilCommand is a thing that you can struct embed to avoid boilerplate
 type nilCommand struct{}
