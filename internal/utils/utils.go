@@ -2,6 +2,7 @@ package utils
 
 import (
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -49,6 +50,22 @@ func Reverse(s string) string {
 		runes[i], runes[j] = runes[j], runes[i]
 	}
 	return string(runes)
+}
+
+// Unmention returns a string with mentions replaced by nicks/usernames
+func Unmention(ses *discordgo.Session, msg *discordgo.Message, str string) string {
+	return regexp.MustCompile(`<@.*>`).ReplaceAllStringFunc(str, func(s string) string {
+		id := strings.Trim(s, "<!@>")
+		member, err := ses.GuildMember(msg.GuildID, id)
+		if err != nil {
+			return id
+		}
+		if len(member.Nick) == 0 {
+			return member.User.Username
+		}
+		return member.Nick
+	})
+
 }
 
 // StrLen Recursively searches for strings and counts up the total length
