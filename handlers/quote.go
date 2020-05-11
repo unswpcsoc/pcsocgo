@@ -105,7 +105,8 @@ func (q *quote) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*comm
 	}
 
 	// Get quote and send it
-	return commands.NewSimpleSend(msg.ChannelID, quo.List[ind]), nil
+	noMentions := utils.Unmention(ses, msg, quo.List[ind])
+	return commands.NewSimpleSend(msg.ChannelID, noMentions), nil
 }
 
 type quoteAdd struct {
@@ -204,8 +205,7 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 		if len(quo.List) == 0 {
 			// quote list is empty
 			quo.List = append(quo.List, pen.List[q.Index])
-			//quo.Last++
-			ins = len(quo.List)
+			ins = len(quo.List) - 1
 			return
 		}
 
@@ -224,7 +224,6 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 
 		// didn't find index, insert at end
 		quo.List = append(quo.List, pen.List[q.Index])
-		//quo.Last = ins
 	}()
 
 	// get all elements before the index
@@ -237,7 +236,6 @@ func (q *quoteApprove) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 
 	// set new pending list
 	pen.List = newPen
-	//pen.Last--
 
 	// Set quotes and pending
 	_, _, err = commands.DBSet(&pen, keyPending)
@@ -285,12 +283,19 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		// Ceil(30/15)-1 = 1		| 15 15
 		// Ceil(31/15)-1 = 2 		| 15 15 1
 		lastPage := int(math.Ceil(float64(len(quo.List))/float64(quoteListLimit))) - 1
+		quoteLim := quoteListLimit
+		once := false
+		if len(quo.List) < quoteListLimit {
+			lastPage = 0
+			quoteLim = len(quo.List)
+			once = true
+		}
 
 		// send a message first
 		out := utils.Under("Quotes of UNSW PCSoc")
-		for i, quote := range quo.List[0:quoteListLimit] {
+		for i, quote := range quo.List[0:quoteLim] {
 			if quote != "" {
-				out += fmt.Sprintf("\n**#%d:** %s", i, quote)
+				out += fmt.Sprintf("\n**#%d:** %s", i, utils.Unmention(ses, msg, quote))
 			}
 		}
 		out += fmt.Sprintf("\n`Page 0/%d`", lastPage)
@@ -298,6 +303,11 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		// send initial message
 		outMessage, err := ses.ChannelMessageSend(msg.ChannelID, out)
 		if err != nil {
+			return
+		}
+
+		// check once
+		if once {
 			return
 		}
 
@@ -360,7 +370,7 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 			edit := utils.Under("Quotes of UNSW PCSoc")
 			for i, quote := range quo.List[left:right] {
 				if quote != "" {
-					edit += fmt.Sprintf("\n**#%d:** %s", i+left, quote)
+					edit += fmt.Sprintf("\n**#%d:** %s", i+left, utils.Unmention(ses, msg, quote))
 				}
 			}
 			edit += fmt.Sprintf("\n`Page %d/%d`", page, lastPage)
