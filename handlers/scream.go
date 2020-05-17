@@ -30,12 +30,9 @@ func (s *scream) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*com
 	// get nick
 	mem, err := ses.GuildMember(msg.GuildID, msg.Author.ID)
 	if err == nil {
-		// check if nick contains curry
-		if len(mem.Nick) > 0 && strings.Contains(strings.ToLower(mem.Nick), "curry") {
-			// 1/2 chance to VORE
-			if rand.Intn(2) == 0 {
-				return commands.NewSimpleSend(msg.ChannelID, "VORE"), nil
-			}
+		// 0.1% chance to VORE
+		if rand.Intn(1000) == 0 {
+			return commands.NewSimpleSend(msg.ChannelID, "VORE"), nil
 		}
 	}
 
