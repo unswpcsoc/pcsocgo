@@ -27,25 +27,34 @@ func (s *scream) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*com
 	// seed randomness every run
 	rand.Seed(time.Now().UnixNano())
 
+	// get nick
+	mem, err := ses.GuildMember(msg.GuildID, msg.Author.ID)
+	if err == nil {
+		// check if nick contains curry
+		if len(mem.Nick) > 0 && strings.Contains(strings.ToLower(mem.Nick), "curry") {
+			// 1/2 chance to VORE
+			if rand.Intn(2) == 0 {
+				return commands.NewSimpleSend(msg.ChannelID, "VORE"), nil
+			}
+		}
+	}
+
 	// roll 20-sided die
 	var out string
 	switch rand.Intn(20) {
 	case 0: // HHHhhhh
 		out = utils.Reverse(trailCaps("h"))
 
-	case 1: // NmmMMMM
-		out = "Nmm" + trailCaps("M")
-
-	case 2: // eeeEEEE
+	case 1: // eeeEEEE
 		out = trailCaps("e")
 
-	case 3: // aaaaAAA
+	case 2: // aaaaAAA
 		out = trailCaps("a")
 
-	case 4: // AAAaaaa
+	case 3: // AAAaaaa
 		out = utils.Reverse(trailCaps("a"))
 
-	case 5: // AAAAAAA
+	case 4: // AAAAAAA
 		out = strings.Repeat("A", rand.Intn(500)+1)
 
 	default: // regular homerow mashing, and then some
