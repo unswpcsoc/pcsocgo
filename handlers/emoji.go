@@ -97,13 +97,16 @@ func (e *emojiCount) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 
 type emojiChungus struct {
 	nilCommand
+	Emoji []string `arg:"emoji"`
 }
 
 func newEmojiChungus() *emojiChungus { return &emojiChungus{} }
 
 func (e *emojiChungus) Aliases() []string { return []string{"emoji chungus", "emoji ch", "chungus"} }
 
-func (e *emojiChungus) Desc() string { return "Prints a random custom server emojiChungus" }
+func (e *emojiChungus) Desc() string {
+	return "Prints a chungus with the emoji supplied or a random custom server one"
+}
 
 func (e *emojiChungus) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
 	// get guild emojis
@@ -112,9 +115,14 @@ func (e *emojiChungus) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 		return nil, err
 	}
 
-	// randomly select an emoji
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	picked := emojis[r.Intn(len(emojis))].MessageFormat()
+	var picked string
+	if len(e.Emoji) == 0 {
+		// randomly select an emoji
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		picked = emojis[r.Intn(len(emojis))].MessageFormat()
+	} else {
+		picked = strings.Join(e.Emoji, " ")
+	}
 
 	chungachunga := "<:cw:590153701252005907><:c1_0:590153698324381698><:c2_0:590153703609204760><:cw:590153701252005907>\n<"
 	chungachunga += ":cw:590153701252005907><:c1_1:590153699372826634>" + picked + "<:c3_1:590153701281497109>\n"
