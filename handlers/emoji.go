@@ -87,7 +87,7 @@ func (e *emojiCount) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 		return nil, err
 	}
 
-	var out string = "Emoji stats (from " + emo.Start.Format("5:04:05 MST 2006-01-02") + "):\n"
+	var out string = "Emoji stats (from " + emo.Start.Format("15:04:05 MST 2006-01-02") + "):\n"
 	for emojiText, count := range emo.Counter {
 		out += fmt.Sprintf("%s : %d\n", emojiText, count)
 	}
