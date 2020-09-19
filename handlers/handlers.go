@@ -64,6 +64,12 @@ func init() {
 	//commandRouter.AddCommand(newRules())
 	//commandRouter.AddCommand(newRulesGet())
 	//commandRouter.AddCommand(newRulesSet())
+
+	commandRouter.AddCommand(newEmoji())
+	commandRouter.AddCommand(newEmojiCount())
+	commandRouter.AddCommand(newEmojiChungus())
+	commandRouter.AddCommand(newEmojiCunt())
+	commandRouter.AddCommand(newEmojiRegional())
 }
 
 // RouterRoute is a wrapper around the handler package's internal router's Route method
@@ -90,6 +96,7 @@ func InitLogs(ses *discordgo.Session) {
 	initFil(ses)
 	initDel(ses)
 	initArchive(ses)
+	initEmoji(ses)
 }
 
 // InitDaemons inits all daemons, returns a function to close all channels when done
