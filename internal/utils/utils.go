@@ -188,13 +188,13 @@ func MsgInChannels(s *discordgo.Session, m *discordgo.Message, channels []string
 func EmojiAlpha(s string) string {
 	out := ""
 	for _, char := range s {
-		if char < 'z' && char > 'a' {
+		if char <= 'z' && char >= 'a' {
 			out += string(0x1f1e6 + char - 'a')
 			out += " "
 			continue
 		}
 
-		if char < 'Z' && char > 'A' {
+		if char <= 'Z' && char >= 'A' {
 			out += string(0x1f1e6 + char - 'A')
 			out += " "
 			continue
