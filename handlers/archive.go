@@ -87,7 +87,7 @@ func (a *archive) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 	// craft message
 	out := &discordgo.MessageSend{
 		Content: "",
-		Tts:     false,
+		TTS:     false,
 		Files:   []*discordgo.File{},
 	}
 

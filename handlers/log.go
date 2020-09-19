@@ -273,7 +273,7 @@ func initDel(ses *discordgo.Session) {
 		// craft message
 		out := &discordgo.MessageSend{
 			Content: "",
-			Tts:     false,
+			TTS:     false,
 		}
 
 		// check if content was empty

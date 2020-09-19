@@ -183,3 +183,30 @@ func MsgInChannels(s *discordgo.Session, m *discordgo.Message, channels []string
 
 	return false, nil
 }
+
+// EmojiAlpha Returns a string of the emoji equivalent of the string
+func EmojiAlpha(s string) string {
+	out := ""
+	for _, char := range s {
+		if char < 'z' && char > 'a' {
+			out += string(0x1f1e6 + char - 'a')
+			out += " "
+			continue
+		}
+
+		if char < 'Z' && char > 'A' {
+			out += string(0x1f1e6 + char - 'A')
+			out += " "
+			continue
+		}
+
+		if char == ' ' {
+			out += string(0x1f914)
+			continue
+		}
+
+		out += string(char)
+	}
+
+	return out
+}
