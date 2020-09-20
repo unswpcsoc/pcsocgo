@@ -27,10 +27,9 @@ func (s *scream) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*com
 	// seed randomness every run
 	rand.Seed(time.Now().UnixNano())
 
-	// get nick
-	mem, err := ses.GuildMember(msg.GuildID, msg.Author.ID)
+	// 0.1% chance to VORE
+	_, err := ses.GuildMember(msg.GuildID, msg.Author.ID)
 	if err == nil {
-		// 0.1% chance to VORE
 		if rand.Intn(1000) == 0 {
 			return commands.NewSimpleSend(msg.ChannelID, "VORE"), nil
 		}
