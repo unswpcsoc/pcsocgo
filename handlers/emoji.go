@@ -164,6 +164,11 @@ func (e *emojiRegional) MsgHandle(ses *discordgo.Session, msg *discordgo.Message
 // logger for emoji count
 func initEmoji(ses *discordgo.Session) {
 	ses.AddHandler(func(se *discordgo.Session, mc *discordgo.MessageCreate) {
+
+		// lock the db for writing
+		commands.DBLock()
+		defer commands.DBUnlock()
+
 		if mc.Author.Bot {
 			return
 		}
@@ -201,6 +206,11 @@ func initEmoji(ses *discordgo.Session) {
 	})
 
 	ses.AddHandler(func(se *discordgo.Session, mra *discordgo.MessageReactionAdd) {
+
+		// lock the db for writing
+		commands.DBLock()
+		defer commands.DBUnlock()
+
 		mem, err := se.State.Member(mra.GuildID, mra.UserID)
 		if err == nil {
 			if mem.User.Bot {
@@ -250,6 +260,11 @@ func initEmoji(ses *discordgo.Session) {
 	})
 
 	ses.AddHandler(func(se *discordgo.Session, mrr *discordgo.MessageReactionRemove) {
+
+		// lock the db for writing
+		commands.DBLock()
+		defer commands.DBUnlock()
+
 		mem, err := se.State.Member(mrr.GuildID, mrr.UserID)
 		if err == nil {
 			if mem.User.Bot {
