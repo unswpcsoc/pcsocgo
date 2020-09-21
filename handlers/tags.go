@@ -145,8 +145,13 @@ func (t *tags) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*comma
 	for _, utg := range plt.Users {
 		mem, err := ses.State.Member(msg.GuildID, utg.UID)
 		if err != nil {
-			utags = append(utags, nil)
-			continue
+			// try use session instead
+			mem, err = ses.GuildMember(msg.GuildID, utg.UID)
+			if err != nil {
+				// give up
+				utags = append(utags, nil)
+				continue
+			}
 		}
 		utg.Username = mem.User.Username
 		utags = append(utags, utg)
@@ -158,7 +163,7 @@ func (t *tags) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*comma
 			return false
 		}
 
-		if strings.Compare(utags[i].Username, utags[i].Username) < 0 {
+		if strings.Compare(utags[i].Username, utags[j].Username) < 0 {
 			return true
 		}
 		return false
@@ -500,8 +505,13 @@ func (t *tagsList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 	for _, utg := range plt.Users {
 		mem, err := ses.State.Member(msg.GuildID, utg.UID)
 		if err != nil {
-			utags = append(utags, nil)
-			continue
+			// try use session instead
+			mem, err = ses.GuildMember(msg.GuildID, utg.UID)
+			if err != nil {
+				// give up
+				utags = append(utags, nil)
+				continue
+			}
 		}
 		utg.Username = mem.User.Username
 		utags = append(utags, utg)
@@ -513,7 +523,7 @@ func (t *tagsList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 			return false
 		}
 
-		if strings.Compare(utags[i].Username, utags[i].Username) < 0 {
+		if strings.Compare(utags[i].Username, utags[j].Username) < 0 {
 			return true
 		}
 		return false
