@@ -3,7 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
-	"log"
+	logs "log"
 	"math/rand"
 	"strings"
 	"time"
@@ -93,7 +93,7 @@ func (e *emojiCount) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 		out += fmt.Sprintf("%s : %d\n", emojiText, count)
 	}
 
-	log.Println(out)
+	logs.Println(out)
 	return commands.NewSimpleSend(msg.ChannelID, out), nil
 }
 
