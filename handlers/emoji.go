@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"time"
 
@@ -76,7 +77,9 @@ func (e *emojiCount) Aliases() []string {
 	return []string{"emoji count", "emoji co", "emoji stats", "emoji st"}
 }
 
-func (e *emojiCount) Desc() string { return "Prints a summary of the usage of custom server emojis" }
+func (e *emojiCount) Desc() string {
+	return "Prints a summary of the usage of custom server emojis\nNote: emoji are counted per message and reaction; using 10 of the same emoji in one message will only count as 1"
+}
 
 func (e *emojiCount) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
 	// Get emojis
@@ -88,10 +91,24 @@ func (e *emojiCount) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 		return nil, err
 	}
 
+	// sort by most used
+	type kv struct {
+		Key   string
+		Value int
+	}
+
+	counts := []kv{}
+	for key, val := range emo.Counter {
+		counts = append(counts, kv{key, val})
+	}
+	sort.Slice(counts, func(left, right int) bool {
+		return counts[left].Value > counts[right].Value
+	})
+
 	var title string = "Emoji stats (from " + emo.Start.Format("15:04:05 MST 2006-01-02") + "):\n"
 	lines := []string{}
-	for emojiText, count := range emo.Counter {
-		lines = append(lines, fmt.Sprintf("%s : %d", emojiText, count))
+	for _, item := range counts {
+		lines = append(lines, fmt.Sprintf("%s : %d", item.Key, item.Value))
 	}
 
 	unregister, needUnregister := InitPaginated(ses, msg, title, lines, emojiLineLimit)
