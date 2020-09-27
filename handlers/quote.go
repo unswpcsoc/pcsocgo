@@ -3,7 +3,6 @@ package handlers
 import (
 	"errors"
 	"fmt"
-	"math"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -24,12 +23,6 @@ const (
 	quoteListLimit     = 15
 
 	searchLimit = 5
-
-	// ��
-	emojiLeft  = "jrleft:681465381298503802"
-	emojiRight = "jrright:681465381356961827"
-	//emojiLeft  = "leee:690176095433392149"
-	//emojiRight = "reee:468260188500131850"
 )
 
 var (
@@ -275,119 +268,26 @@ func (q *quoteList) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*
 		return nil, err
 	}
 
-	timer := time.NewTimer(2 * time.Minute)
-	go func() {
-		// keep state of message
-		page := 0
-		// pages are indexed at 0
-		// Ceil(30/15)-1 = 1		| 15 15
-		// Ceil(31/15)-1 = 2 		| 15 15 1
-		lastPage := int(math.Ceil(float64(len(quo.List))/float64(quoteListLimit))) - 1
-		quoteLim := quoteListLimit
-		once := false
-		if len(quo.List) < quoteListLimit {
-			lastPage = 0
-			quoteLim = len(quo.List)
-			once = true
+	// make line list
+	title := utils.Under("Quotes of PCSoc:")
+	lines := []string{}
+	for i, quote := range quo.List {
+		if quote != "" {
+			lines = append(lines, fmt.Sprintf("\n**#%d:** %s", i, utils.Unmention(ses, msg, quote)))
 		}
+	}
 
-		// send a message first
-		out := utils.Under("Quotes of UNSW PCSoc")
-		for i, quote := range quo.List[0:quoteLim] {
-			if quote != "" {
-				out += fmt.Sprintf("\n**#%d:** %s", i, utils.Unmention(ses, msg, quote))
-			}
-		}
-		out += fmt.Sprintf("\n`Page 0/%d`", lastPage)
+	unregister, needUnregister := InitPaginated(ses, msg, title, lines, quoteListLimit)
 
-		// send initial message
-		outMessage, err := ses.ChannelMessageSend(msg.ChannelID, out)
-		if err != nil {
-			return
-		}
+	if needUnregister {
+		fmt.Println("needs unregistering")
+		timer := time.NewTimer(2 * time.Minute)
 
-		// check once
-		if once {
-			return
-		}
-
-		// react with left and right emojis
-		err = ses.MessageReactionAdd(msg.ChannelID, outMessage.ID, emojiLeft)
-		if err != nil {
-			return
-		}
-
-		err = ses.MessageReactionAdd(msg.ChannelID, outMessage.ID, emojiRight)
-		if err != nil {
-			return
-		}
-
-		unregister := ses.AddHandler(func(innerSes *discordgo.Session, event *discordgo.MessageReactionAdd) {
-			reaction := event.MessageReaction
-
-			// listen for reactions on the specific message sent
-			if reaction.MessageID != outMessage.ID || reaction.UserID == outMessage.Author.ID {
-				return
-			}
-
-			// ignore non-control emoji
-			reactEmoji := reaction.Emoji.APIName()
-			if reactEmoji != emojiLeft && reactEmoji != emojiRight {
-				return
-			}
-
-			// remove the reaction made by the user
-			err := innerSes.MessageReactionRemove(
-				reaction.ChannelID,
-				reaction.MessageID,
-				reaction.Emoji.APIName(),
-				reaction.UserID,
-			)
-			if err != nil {
-				return
-			}
-
-			if reactEmoji == emojiLeft && page == 0 {
-				page = lastPage
-			} else if reactEmoji == emojiLeft {
-				page--
-			}
-
-			if reactEmoji == emojiRight && page+1 > lastPage {
-				page = 0
-			} else if reactEmoji == emojiRight {
-				page++
-			}
-
-			// calculate bounds
-			left := page * quoteListLimit
-			right := (page + 1) * quoteListLimit
-			if right > len(quo.List) {
-				right = len(quo.List)
-			}
-
-			// construct edit message
-			edit := utils.Under("Quotes of UNSW PCSoc")
-			for i, quote := range quo.List[left:right] {
-				if quote != "" {
-					edit += fmt.Sprintf("\n**#%d:** %s", i+left, utils.Unmention(ses, msg, quote))
-				}
-			}
-			edit += fmt.Sprintf("\n`Page %d/%d`", page, lastPage)
-
-			// actually edit the damn message
-			innerSes.ChannelMessageEdit(reaction.ChannelID, reaction.MessageID, edit)
-
-		})
-
-		// wait until the timer is done, then unregister the handler and the reactions
 		<-timer.C
 
 		// yeet
-		ses.MessageReactionsRemoveAll(msg.ChannelID, outMessage.ID)
-		ses.MessageReactionsRemoveAll(msg.ChannelID, outMessage.ID)
 		unregister()
-	}()
+	}
 
 	return nil, nil
 }
