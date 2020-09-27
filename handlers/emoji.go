@@ -3,7 +3,6 @@ package handlers
 import (
 	"errors"
 	"fmt"
-	logs "log"
 	"math/rand"
 	"strings"
 	"time"
@@ -88,13 +87,24 @@ func (e *emojiCount) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 		return nil, err
 	}
 
-	var out string = "Emoji stats (from " + emo.Start.Format("15:04:05 MST 2006-01-02") + "):\n"
+	var title string = "Emoji stats (from " + emo.Start.Format("15:04:05 MST 2006-01-02") + "):\n"
+	lines := []string{}
 	for emojiText, count := range emo.Counter {
-		out += fmt.Sprintf("%s : %d\n", emojiText, count)
+		lines = append(lines, fmt.Sprintf("%s : %d", emojiText, count))
 	}
 
-	logs.Println(out)
-	return commands.NewSimpleSend(msg.ChannelID, out), nil
+	unregister, needUnregister := InitPaginated(ses, msg, title, lines, 2)
+
+	if needUnregister {
+		timer := time.NewTimer(2 * time.Minute)
+
+		<-timer.C
+
+		// yeet
+		unregister()
+	}
+
+	return nil, nil
 }
 
 type emojiChungus struct {
