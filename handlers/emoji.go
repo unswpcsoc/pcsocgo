@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	keyEmoji      = "emoji"
-	thinkingEmoji = string(0x1f914)
+	keyEmoji       = "emoji"
+	thinkingEmoji  = string(0x1f914)
+	emojiLineLimit = 15
 )
 
 var (
@@ -93,7 +94,7 @@ func (e *emojiCount) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (
 		lines = append(lines, fmt.Sprintf("%s : %d", emojiText, count))
 	}
 
-	unregister, needUnregister := InitPaginated(ses, msg, title, lines, 2)
+	unregister, needUnregister := InitPaginated(ses, msg, title, lines, emojiLineLimit)
 
 	if needUnregister {
 		timer := time.NewTimer(2 * time.Minute)
