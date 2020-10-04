@@ -1,10 +1,25 @@
 package handlers
 
 import (
-	"bwmarrin/discordgo"
-	"logs"
+	logs "log"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
+
+	"github.com/unswpcsoc/pcsocgo/commands"
 )
+
+const (
+	bdaysKey = "birthday"
+)
+
+type birthdayStorer struct {
+	birthdays map[string]time.Time
+}
+
+func (b *birthdayStorer) Index() string {
+	return "birthday"
+}
 
 func initBirthday(ses *discordgo.Session) chan bool {
 	logs.Println("Initialised birthday")
@@ -13,16 +28,34 @@ func initBirthday(ses *discordgo.Session) chan bool {
 	done := make(chan bool)
 	location, err := time.LoadLocation("Australia/Sydney")
 	if err != nil {
-		return false
+		panic("location is bad :(")
 	}
+
 	now := time.Now()
 	aestTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), now.Nanosecond(), location)
 
 	doBirthday := func() {
 		// check at aest midnight
-		if aestTime.Hour() == 0 && aestTime.Minute() == 0 {
-			// call handler
-			logs.Println("Calling birthday handler")
+		if !(aestTime.Hour() == 0 && aestTime.Minute() == 0) {
+			return
+		}
+		// call handler
+		logs.Println("Calling birthday handler")
+
+		var bdays birthdayStorer
+		err = commands.DBGet(&bdays, bdaysKey, &bdays)
+		if err == commands.ErrDBNotFound {
+			logs.Println("No birthdays found in db")
+			return
+		}
+
+		// iterate birthdays
+		for uid, bday := range bdays.birthdays {
+			_, err := ses.User(uid)
+			if err != nil {
+				logs.Println("Could not find user with id:", uid)
+			}
+			logs.Println("bday for user is:", bday)
 		}
 	}
 
