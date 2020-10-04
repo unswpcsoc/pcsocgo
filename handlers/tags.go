@@ -269,7 +269,7 @@ func (t *tagsAdd) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*co
 				// mou sonnanja hora
 				// KOKORO WA SHINKA SURU YO
 				// MOTTO
-				// MOTTO
+				// MO-O-TTO
 
 				// make sure reaction is on the correct message by the correct user
 				if no.MessageReaction.MessageID != war.ID || no.MessageReaction.UserID != msg.Author.ID {

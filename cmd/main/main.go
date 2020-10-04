@@ -90,6 +90,13 @@ func main() {
 	closeDaemons = handlers.InitDaemons(dgo)
 	defer closeDaemons()
 
+	// init guild cache
+	err = commands.InitGuilds(dgo)
+	if err != nil {
+		errs.Fatalln(err)
+	}
+	log.Println("Operating on guild:", commands.Guild)
+
 	// handle create message event
 	dgo.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		handleMessageEvent(s, m.Message)

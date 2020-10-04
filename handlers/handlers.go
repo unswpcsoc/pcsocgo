@@ -80,6 +80,10 @@ func init() {
 	commandRouter.AddCommand(newEmojiChungus())
 	commandRouter.AddCommand(newEmojiCunt())
 	commandRouter.AddCommand(newEmojiRegional())
+
+	commandRouter.AddCommand(newBirthday())
+	commandRouter.AddCommand(newBirthdayRemove())
+	commandRouter.AddCommand(newBirthdayModCheck())
 }
 
 // RouterRoute is a wrapper around the handler package's internal router's Route method
