@@ -26,6 +26,8 @@ var (
 	ErrSendLimit = errors.New("message exceeds send limit of 2000 characters")
 	// ErrNotEnoughArgs means the user did not provide enough arguments to the command
 	ErrNotEnoughArgs = errors.New("not enough arguments provided")
+	// Guild is the guild to use (this bot is designed for only one server)
+	Guild = &discordgo.UserGuild{}
 )
 
 // Command is the interface that all commands implement.
@@ -352,4 +354,14 @@ func CleanArgs(c Command) {
 		// zero out field
 		fv.Set(reflect.Zero(fv.Type()))
 	}
+}
+
+// InitGuilds initialises guilds for the modules to use
+func InitGuilds(ses *discordgo.Session) error {
+	guilds, err := ses.UserGuilds(1, "", "")
+	if err != nil {
+		return err
+	}
+	Guild = guilds[0]
+	return nil
 }
