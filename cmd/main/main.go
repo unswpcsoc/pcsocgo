@@ -90,115 +90,14 @@ func main() {
 	closeDaemons = handlers.InitDaemons(dgo)
 	defer closeDaemons()
 
-	// handle commands
+	// handle create message event
 	dgo.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		// catch panics on production
-		if prod {
-			defer func() {
-				if r := recover(); r != nil {
-					errs.Printf("Caught panic: %#v\n", r)
-				}
-			}()
-		}
+		handleMessageEvent(s, m.Message)
+	})
 
-		if m.Author.ID == s.State.User.ID || m.Author.Bot {
-			return
-		}
-
-		trm := strings.TrimSpace(m.Content)
-		if !strings.HasPrefix(trm, commands.Prefix) || len(trm) == 1 {
-			return
-		}
-
-		// route message
-		var com commands.Command
-		var ind int
-		var ok bool
-		argv := strings.Split(trm[1:], " ")
-		if argv[0] == "!" {
-			com, ok = lastCom[m.Message.Author.ID]
-			if !ok {
-				return
-			}
-			// !! args...
-			ind = 1
-		} else {
-			// regular routing
-			com, ind = handlers.RouterRoute(argv)
-			if com == nil {
-				return
-			}
-		}
-
-		// check chans
-		chans := com.Chans()
-		has, err := utils.MsgInChannels(s, m.Message, chans)
-		if err != nil {
-			errs.Printf("Channel checking threw: %#v\n", err)
-		}
-		if !has {
-			out := "Error: You must be in " + utils.Code(chans[0])
-			if len(chans) > 1 {
-				others := chans[1:]
-				for _, oth := range others {
-					out += " or " + utils.Code(oth)
-				}
-			}
-			out += " to use this command"
-			s.ChannelMessageSend(m.ChannelID, utils.Italics(out))
-			return
-		}
-
-		// check roles
-		roles := com.Roles()
-		has, err = utils.MsgHasRoles(s, m.Message, roles)
-		if err != nil {
-			errs.Printf("Role checking threw: %#v\n", err)
-		}
-		if !has {
-			out := "Error: You must be a " + utils.Code(roles[0])
-			if len(roles) > 1 {
-				others := roles[1:]
-				for _, oth := range others {
-					out += " or a " + utils.Code(oth)
-				}
-			}
-			out += " to use this command"
-			s.ChannelMessageSend(m.ChannelID, utils.Italics(out))
-			return
-		}
-
-		// successfully routed, register in !! before usage check
-		lastCom[m.Message.Author.ID] = com
-
-		// fill args and check usage
-		err = commands.FillArgs(com, argv[ind:])
-		if err != nil {
-			usage := "Usage: " + commands.GetUsage(com)
-			s.ChannelMessageSend(m.ChannelID, usage)
-			errs.Printf("Usage error on command %#v: %#v\n", com, err)
-			return
-		}
-
-		// handle message
-		s.ChannelTyping(m.ChannelID)
-		snd, err := com.MsgHandle(s, m.Message)
-		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, utils.Italics("Error: "+err.Error()))
-			errs.Printf("%#v threw error: %#v\n", com, err)
-			return
-		}
-
-		// send returned message
-		if snd != nil {
-			err = snd.Send(s)
-			if err != nil {
-				errs.Printf("Send error: %#v\n", err)
-			}
-		}
-
-		// clean up args
-		commands.CleanArgs(com)
+	// handle update message event
+	dgo.AddHandler(func(s *discordgo.Session, m *discordgo.MessageUpdate) {
+		handleMessageEvent(s, m.Message)
 	})
 
 	// keep alive
@@ -208,4 +107,114 @@ func main() {
 
 	log.Println("Received Signal: " + sig.String())
 	log.Println("Bye!")
+}
+
+func handleMessageEvent(s *discordgo.Session, m *discordgo.Message) {
+	// catch panics on production
+	if prod {
+		defer func() {
+			if r := recover(); r != nil {
+				errs.Printf("Caught panic: %#v\n", r)
+			}
+		}()
+	}
+
+	if m.Author.ID == s.State.User.ID || m.Author.Bot {
+		return
+	}
+
+	trm := strings.TrimSpace(m.Content)
+	if !strings.HasPrefix(trm, commands.Prefix) || len(trm) == 1 {
+		return
+	}
+
+	// route message
+	var com commands.Command
+	var ind int
+	var ok bool
+	argv := strings.Split(trm[1:], " ")
+	if argv[0] == "!" {
+		com, ok = lastCom[m.Author.ID]
+		if !ok {
+			return
+		}
+		// !! args...
+		ind = 1
+	} else {
+		// regular routing
+		com, ind = handlers.RouterRoute(argv)
+		if com == nil {
+			return
+		}
+	}
+
+	// check chans
+	chans := com.Chans()
+	has, err := utils.MsgInChannels(s, m, chans)
+	if err != nil {
+		errs.Printf("Channel checking threw: %#v\n", err)
+	}
+	if !has {
+		out := "Error: You must be in " + utils.Code(chans[0])
+		if len(chans) > 1 {
+			others := chans[1:]
+			for _, oth := range others {
+				out += " or " + utils.Code(oth)
+			}
+		}
+		out += " to use this command"
+		s.ChannelMessageSend(m.ChannelID, utils.Italics(out))
+		return
+	}
+
+	// check roles
+	roles := com.Roles()
+	has, err = utils.MsgHasRoles(s, m, roles)
+	if err != nil {
+		errs.Printf("Role checking threw: %#v\n", err)
+	}
+	if !has {
+		out := "Error: You must be a " + utils.Code(roles[0])
+		if len(roles) > 1 {
+			others := roles[1:]
+			for _, oth := range others {
+				out += " or a " + utils.Code(oth)
+			}
+		}
+		out += " to use this command"
+		s.ChannelMessageSend(m.ChannelID, utils.Italics(out))
+		return
+	}
+
+	// successfully routed, register in !! before usage check
+	lastCom[m.Author.ID] = com
+
+	// fill args and check usage
+	err = commands.FillArgs(com, argv[ind:])
+	if err != nil {
+		usage := "Usage: " + commands.GetUsage(com)
+		s.ChannelMessageSend(m.ChannelID, usage)
+		errs.Printf("Usage error on command %#v: %#v\n", com, err)
+		return
+	}
+
+	// handle message
+	s.ChannelTyping(m.ChannelID)
+	snd, err := com.MsgHandle(s, m)
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, utils.Italics("Error: "+err.Error()))
+		errs.Printf("%#v threw error: %#v\n", com, err)
+		return
+	}
+
+	// send returned message
+	if snd != nil {
+		err = snd.Send(s)
+		if err != nil {
+			errs.Printf("Send error: %#v\n", err)
+		}
+	}
+
+	// clean up args
+	commands.CleanArgs(com)
 }
