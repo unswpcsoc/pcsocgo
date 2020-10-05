@@ -136,7 +136,7 @@ func (b *BirthdayModCheck) MsgHandle(ses *discordgo.Session, msg *discordgo.Mess
 
 func doBirthday(ses *discordgo.Session, tim time.Time) error {
 	// call handler
-	logs.Println("Calling birthday handler")
+	logs.Println("Calling birthday handler for time:", tim)
 
 	var bdays birthdayStorer
 	err := commands.DBGet(&bdays, bdaysKey, &bdays)
@@ -148,7 +148,7 @@ func doBirthday(ses *discordgo.Session, tim time.Time) error {
 	// get birthday role
 	guildroles, err := ses.GuildRoles(commands.Guild.ID)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	roleID := ""
@@ -211,7 +211,10 @@ func initBirthday(ses *discordgo.Session) chan bool {
 			if !(aestTime.Hour() == 0 && aestTime.Minute() == 0) {
 				return
 			}
-			doBirthday(ses, aestTime)
+			err := doBirthday(ses, aestTime)
+			if err != nil {
+				logs.Println("birthDaemon:", err)
+			}
 		}
 
 		// handle ticker
@@ -224,7 +227,10 @@ func initBirthday(ses *discordgo.Session) chan bool {
 				if !(aestTime.Hour() == 0 && aestTime.Minute() == 0) {
 					continue
 				}
-				doBirthday(ses, aestTime)
+				err := doBirthday(ses, aestTime)
+				if err != nil {
+					logs.Println("birthDaemon:", err)
+				}
 			}
 		}
 	}()
