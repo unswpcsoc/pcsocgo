@@ -18,7 +18,7 @@ type scream struct {
 func newScream() *scream { return &scream{} }
 
 func (s *scream) Aliases() []string {
-	return []string{"scream", "curry", "curryant", "roomba", "ruby", "a"}
+	return []string{"scream", "curry", "a"}
 }
 
 func (s *scream) Desc() string { return "AAAAAAAAAAAAAAAA" }
@@ -26,14 +26,6 @@ func (s *scream) Desc() string { return "AAAAAAAAAAAAAAAA" }
 func (s *scream) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
 	// seed randomness every run
 	rand.Seed(time.Now().UnixNano())
-
-	// 0.1% chance to VORE
-	_, err := ses.GuildMember(msg.GuildID, msg.Author.ID)
-	if err == nil {
-		if rand.Intn(1000) == 0 {
-			return commands.NewSimpleSend(msg.ChannelID, "VORE"), nil
-		}
-	}
 
 	// roll 20-sided die
 	var out string
