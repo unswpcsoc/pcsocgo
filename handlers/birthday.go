@@ -119,6 +119,8 @@ func (b *BirthdayModCheck) Desc() string {
 	return "Mod utility to check and give the birthday roles manually"
 }
 
+func (b *BirthdayModCheck) Roles() []string { return []string{"mod", "exec"} }
+
 func (b *BirthdayModCheck) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
 	location, err := time.LoadLocation("Australia/Sydney")
 	if err != nil {
