@@ -90,7 +90,7 @@ func (m *MapCache) Insert(ky string, vl *discordgo.Message) {
 		url := vl.Attachments[0].URL
 		splits := strings.Split(url, ".")
 		format := splits[len(splits)-1]
-		logs.Println("Got attachment format: " + format)
+		logs.Println("logDel: Got attachment format: " + format)
 
 		resp, err := http.Get(url)
 		if err != nil {
