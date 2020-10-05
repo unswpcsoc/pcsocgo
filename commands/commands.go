@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -28,6 +29,8 @@ var (
 	ErrNotEnoughArgs = errors.New("not enough arguments provided")
 	// Guild is the guild to use (this bot is designed for only one server)
 	Guild = &discordgo.UserGuild{}
+	// Report is the report channel ID for reporting things to mods
+	Report = &discordgo.Channel{}
 )
 
 // Command is the interface that all commands implement.
@@ -364,4 +367,22 @@ func InitGuilds(ses *discordgo.Session) error {
 	}
 	Guild = guilds[0]
 	return nil
+}
+
+// InitReport initilalises the report channel for report to use
+func InitReport(ses *discordgo.Session) error {
+	// get report channel
+	guildchannels, err := ses.GuildChannels(Guild.ID)
+	if err != nil {
+		return nil
+	}
+
+	for _, cha := range guildchannels {
+		if strings.Contains(strings.ToLower(cha.Name), strings.ToLower("report")) {
+			Report = cha
+			return nil
+		}
+	}
+
+	return errors.New("cannot see report channel in guild: " + Guild.Name + "\n")
 }
