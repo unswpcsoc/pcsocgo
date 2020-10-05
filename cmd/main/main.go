@@ -97,9 +97,32 @@ func main() {
 	}
 	log.Println("Operating on guild:", commands.Guild)
 
+	// init report
+	err = commands.InitReport(ses)
+	if err != nil {
+		errs.Fatalln(err)
+	}
+	log.Println("Got report channel:", commands.Report)
+
 	// handle create message event
 	dgo.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		handleMessageEvent(s, m.Message)
+		cha, err := s.State.Channel(m.Message.ChannelID)
+		if err != nil {
+			cha, err = s.Channel(m.Message.ChannelID)
+			if err != nil {
+				errs.Println(err)
+			}
+		}
+
+		if cha.Type == discordgo.ChannelTypeGuildText {
+			handleMessageEvent(s, m.Message)
+			return
+		}
+
+		if cha.Type == discordgo.ChannelTypeDM {
+			handlePrivateMessageEvent(s, m.Message)
+			return
+		}
 	})
 
 	// handle update message event
@@ -224,4 +247,23 @@ func handleMessageEvent(s *discordgo.Session, m *discordgo.Message) {
 
 	// clean up args
 	commands.CleanArgs(com)
+}
+
+func handlePrivateMessageEvent(s *discordgo.Session, m *discordgo.Message) {
+	// catch panics on production
+	if prod {
+		defer func() {
+			if r := recover(); r != nil {
+				errs.Printf("Caught panic: %#v\n", r)
+			}
+		}()
+	}
+
+	if m.Author.ID == s.State.User.ID || m.Author.Bot {
+		return
+	}
+
+	// handle report logic
+	handlers.ReportHandler(s, m)
+	return
 }
