@@ -129,7 +129,10 @@ func (b *BirthdayModCheck) MsgHandle(ses *discordgo.Session, msg *discordgo.Mess
 
 	now := time.Now()
 	aestTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), now.Nanosecond(), location)
-	doBirthday(ses, aestTime)
+	err = doBirthday(ses, aestTime)
+	if err != nil {
+		return nil, err
+	}
 
 	return commands.NewSimpleSend(msg.ChannelID, "Check complete!"), nil
 }
