@@ -206,6 +206,7 @@ func handleMessageEvent(s *discordgo.Session, m *discordgo.Message) {
 	}
 
 	// handle message
+	log.Printf("Calling command handler: %+v", com)
 	s.ChannelTyping(m.ChannelID)
 	snd, err := com.MsgHandle(s, m)
 	if err != nil {
