@@ -111,13 +111,14 @@ func InitLogs(ses *discordgo.Session) {
 	initDel(ses)
 	initArchive(ses)
 	initEmoji(ses)
-	initBirthday(ses)
 }
 
 // InitDaemons inits all daemons, returns a function to close all channels when done
 func InitDaemons(ses *discordgo.Session) (Close func()) {
 	chans := []chan bool{}
 	chans = append(chans, initClean(ses))
+	chans = append(chans, initBirthday(ses))
+
 	return func() {
 		// signal all channels on close
 		for _, ch := range chans {
