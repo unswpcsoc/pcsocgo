@@ -208,17 +208,14 @@ func initBirthday(ses *discordgo.Session) chan bool {
 		// handle ticker
 		for {
 			select {
-			case <-done:
-				return
 			case <-ticker.C:
-				// check at aest midnight
-				if !(aestTime.Hour() == 0 && aestTime.Minute() == 0) {
-					continue
-				}
 				err := doBirthday(ses, aestTime)
 				if err != nil {
 					logs.Println("birthDaemon:", err)
 				}
+			case <-done:
+				logs.Println("birthDaemon: received done signal")
+				return
 			}
 		}
 	}()
