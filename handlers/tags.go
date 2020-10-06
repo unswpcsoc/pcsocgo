@@ -978,12 +978,6 @@ func initClean(ses *discordgo.Session) chan bool {
 	}
 
 	go func() {
-		select {
-		case <-done:
-			return
-		default:
-			doClean()
-		}
 		for {
 			select {
 			case <-done:
