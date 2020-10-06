@@ -42,7 +42,7 @@ func (b *Birthday) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 	// parse the birthday
 	bdayString := strings.Trim(b.Birthday, " ")
 
-	birthday, err := time.Parse("2/Jan/2006", bdayString+"/2006")
+	birthday, err := time.Parse("2/Jan", bdayString)
 	if err != nil {
 		return nil, err
 	}
