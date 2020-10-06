@@ -111,6 +111,7 @@ func InitLogs(ses *discordgo.Session) {
 	initDel(ses)
 	initArchive(ses)
 	initEmoji(ses)
+	initBirthday(ses)
 }
 
 // InitDaemons inits all daemons, returns a function to close all channels when done
