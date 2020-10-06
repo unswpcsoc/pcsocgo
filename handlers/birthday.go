@@ -205,21 +205,6 @@ func initBirthday(ses *discordgo.Session) chan bool {
 	aestTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), now.Nanosecond(), location)
 
 	go func() {
-		// handle done signal
-		select {
-		case <-done:
-			return
-		default:
-			// check at aest midnight
-			if !(aestTime.Hour() == 0 && aestTime.Minute() == 0) {
-				return
-			}
-			err := doBirthday(ses, aestTime)
-			if err != nil {
-				logs.Println("birthDaemon:", err)
-			}
-		}
-
 		// handle ticker
 		for {
 			select {
