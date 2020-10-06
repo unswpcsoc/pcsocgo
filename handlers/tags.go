@@ -980,10 +980,11 @@ func initClean(ses *discordgo.Session) chan bool {
 	go func() {
 		for {
 			select {
-			case <-done:
-				return
 			case <-ticker.C:
 				doClean()
+			case <-done:
+				logs.Println("cleanDaemon: received done signal")
+				return
 			}
 		}
 	}()
