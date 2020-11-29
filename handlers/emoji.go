@@ -198,8 +198,13 @@ func (e *emojiChungus) MsgHandle(ses *discordgo.Session, msg *discordgo.Message)
 		// randomly select an emoji
 		picked = emojis[r.Intn(len(emojis))].MessageFormat()
 	} else if strings.HasPrefix(e.Emoji[0], "<") {
-		// has an emoji (I think), put it in
+		// has an emoji (I think), put it all in
 		picked = strings.Join(e.Emoji, "")
+		for i := 0; i < len(e.Emoji)-1; i++ {
+			filler1 += chungusW
+			filler2 += chungus2_2
+			filler3 += chungus2_3
+		}
 	} else {
 		// has a string other than that, search for the emoji, give a random one otherwise
 		outWords := []string{}
