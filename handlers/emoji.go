@@ -36,7 +36,7 @@ func (e *emojis) Index() string {
 // emoji implements the Command interface
 type emoji struct {
 	nilCommand
-	EmojiName []string `arg:"emoji name"`
+	EmojiNames []string `arg:"emoji names"`
 }
 
 func newEmoji() *emoji { return &emoji{} }
@@ -61,18 +61,35 @@ func (e *emoji) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*comm
 		return nil, err
 	}
 
-	if len(e.EmojiName) != 0 {
-		// try find emoji
-		for _, emoji := range emojis {
-			if strings.ToLower(emoji.Name) == strings.ToLower(e.EmojiName[0]) {
-				// found it
-				return commands.NewSimpleSend(msg.ChannelID, emoji.MessageFormat()), nil
+	// seed random
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	if len(e.EmojiNames) != 0 {
+		outWords := []string{}
+		for _, emojiName := range e.EmojiNames {
+			// try find emoji
+			found := false
+			for _, emoji := range emojis {
+				if strings.ToLower(emoji.Name) == strings.ToLower(emojiName) {
+					// found it, append to output list
+					outWords = append(outWords, emoji.MessageFormat())
+					found = true
+					break
+				}
 			}
+
+			if !found {
+				// randomly select an emoji
+				outWords = append(outWords, emojis[r.Intn(len(emojis))].MessageFormat())
+			}
+		}
+
+		if len(emojis) > 0 {
+			return commands.NewSimpleSend(msg.ChannelID, strings.Join(outWords, " ")), nil
 		}
 	}
 
 	// randomly select an emoji
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	picked := emojis[r.Intn(len(emojis))].MessageFormat()
 
 	return commands.NewSimpleSend(msg.ChannelID, picked), nil
