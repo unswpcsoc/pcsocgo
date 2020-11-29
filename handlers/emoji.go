@@ -36,6 +36,7 @@ func (e *emojis) Index() string {
 // emoji implements the Command interface
 type emoji struct {
 	nilCommand
+	EmojiName []string `arg:"emoji name"`
 }
 
 func newEmoji() *emoji { return &emoji{} }
@@ -49,7 +50,7 @@ func (e *emoji) Subcommands() []commands.Command {
 	}
 }
 
-func (e *emoji) Aliases() []string { return []string{"emoji", thinkingEmoji} }
+func (e *emoji) Aliases() []string { return []string{"emoji", thinkingEmoji, "e"} }
 
 func (e *emoji) Desc() string { return "Prints a random custom server emoji" }
 
@@ -58,6 +59,16 @@ func (e *emoji) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*comm
 	emojis, err := ses.GuildEmojis(msg.GuildID)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(e.EmojiName) != 0 {
+		// try find emoji
+		for _, emoji := range emojis {
+			if strings.ToLower(emoji.Name) == strings.ToLower(e.EmojiName[0]) {
+				// found it
+				return commands.NewSimpleSend(msg.ChannelID, emoji.MessageFormat()), nil
+			}
+		}
 	}
 
 	// randomly select an emoji
