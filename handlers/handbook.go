@@ -80,7 +80,7 @@ func (h *handbook) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 	}
 
 	// get data with magic function
-	var url, title, desc, term, cond= "None", "None", "None", "None", "None"
+	var url, title, desc, term, cond = "None", "None", "None", "None", "None"
 	url, title, desc, term, cond, err = postSearch(strings.ToUpper(h.Code), "undergraduate")
 	if err != nil {
 		url, title, desc, term, cond, err = postSearch(strings.ToUpper(h.Code), "postgraduate")
@@ -123,7 +123,7 @@ func postSearch(Code string, Graduate string) (url string, title string, desc st
 
 	//search response for latest year
 	yearNo := 0
-	for i := 0; i < len(bodyJs.Contentlets); i++ {
+	for i := range bodyJs.Contentlets{
 		if bodyJs.Contentlets[yearNo].Urlmap < bodyJs.Contentlets[i].Urlmap {
 			yearNo = i
 		}
