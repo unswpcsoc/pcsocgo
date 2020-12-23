@@ -126,7 +126,7 @@ func handleMessageEvent(s *discordgo.Session, m *discordgo.Message) {
 		}()
 	}
 
-	if m.Author.ID == s.State.User.ID || m.Author.Bot {
+	if m.Author == nil || m.Author.ID == s.State.User.ID || m.Author.Bot {
 		return
 	}
 
