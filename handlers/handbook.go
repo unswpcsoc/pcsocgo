@@ -2,15 +2,14 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"html"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
-
 	"github.com/unswpcsoc/pcsocgo/commands"
-
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -25,6 +24,31 @@ type handbook struct {
 	nilCommand
 	Code string `arg:"code"`
 }
+
+type Body struct {
+	Contentlets []Contentlets
+}
+
+type Contentlets struct {
+	Data string
+	Urlmap string
+}
+
+type Data struct {
+	Title string
+	Description string
+	Enrolment_Rules []Enrolment_Rules
+	Offering_Detail Offering_Detail
+}
+
+type Enrolment_Rules struct {
+	Description string
+}
+
+type Offering_Detail struct {
+	Offering_Terms string
+}
+
 
 func newHandbook() *handbook { return &handbook{} }
 
@@ -54,95 +78,14 @@ func (h *handbook) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 		return nil, ErrInvalidFormat
 	}
 
-	//assume undergraduate
-	url, htmlText, status, err := getResponse(h.Code, "undergraduate")
+	// get data with magic function
+	var url, title, desc, term, cond= "None", "None", "None", "None", "None"
+	url, title, desc, term, cond, err = postSearch(strings.ToUpper(h.Code), "undergraduate")
 	if err != nil {
-		return nil, err
-	}
-
-	//if not undergraduate then must be postgraduate
-	if status != 200 {
-		url, htmlText, status, err = getResponse(h.Code, "postgraduate")
+		url, title, desc, term, cond, err = postSearch(strings.ToUpper(h.Code), "postgraduate")
 	}
 	if err != nil {
 		return nil, err
-	}
-
-	if status != 200 {
-		// probably a 404 error but whatever it is, the page could not be accessed
-		return nil, ErrNotFound
-	}
-
-	// initialise info
-	var title, desc, term, cond = "", "", "", ""
-
-	// extract info via shifty means
-	lines := bytes.Split(htmlText, []byte("\n"))
-	for i, line := range lines {
-		lineString := string(line)
-		if title == "" {
-			if strings.Contains(lineString, "module-title") {
-				titleSlice := strings.Split(lineString, ">")
-				if len(titleSlice) >= 3 {
-					title = strings.Split(titleSlice[2], "<")[0]
-				} else {
-					return nil, ErrScrapingFailed
-				}
-			}
-
-		}
-		if desc == "" {
-			if strings.Contains(lineString, "readmore__wrapper") {
-				if len(lines) <= i+2 {
-					return nil, ErrScrapingFailed
-				}
-				desc = string(lines[i+2])
-				desc = html.UnescapeString(desc)
-				// if the desc have html formatting (<>) before it, take the first entry
-				if string(desc[0]) == "<" {
-					descSlice := strings.Split(desc, ">")
-					if len(descSlice) >= 2 {
-						desc = strings.Split(descSlice[1], "<")[0]
-					} else {
-						return nil, ErrScrapingFailed
-					}
-				}
-			}
-		}
-		if term == "" {
-			if strings.Contains(lineString, ">Offering Terms<") {
-				if len(lines) <= i+1 {
-					return nil, ErrScrapingFailed
-				}
-				termSlice := strings.Split(string(lines[i+1]), ">")
-				if len(termSlice) >= 2 {
-					term = strings.Split(termSlice[1], "<")[0]
-				} else {
-					return nil, ErrScrapingFailed
-				}
-			}
-		}
-		if cond == "" {
-			if strings.Contains(lineString, "Prerequisite") {
-				condSlice := strings.Split(lineString, ">")
-				if len(condSlice) >= 2 {
-					cond = strings.Split(condSlice[1], "<")[0]
-				} else {
-					return nil, ErrScrapingFailed
-				}
-			}
-		}
-		if title != "" && desc != "" && term != "" && cond != "" {
-			// stop early if all fields are filled
-			break
-		}
-	}
-	// If no prerequisites/offering found
-	if cond == "" {
-		cond = "None"
-	}
-	if term == "" {
-		term = "None"
 	}
 
 	// create and send message
@@ -151,21 +94,65 @@ func (h *handbook) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*c
 	return message.Embed(embed), nil
 }
 
-func getResponse(Code string, Graduate string) (url string, htmlText []byte, respCode int, err error) {
-	// access page
-	url = "https://www.handbook.unsw.edu.au/" + Graduate + "/courses/2020/" + Code
-	resp, err := http.Get(url)
+func postSearch(Code string, Graduate string) (url string, title string, desc string, term string, cond string, err error) {
+	//establish post request
+	posturl := "https://www.handbook.unsw.edu.au/api/es/search"
+	var requestJson = []byte(`{"query":{"bool":{"must":[{"query_string":{"query":"unsw_psubject.code: ` + Code + `"}},{"term":{"live":true}},{"bool":{"minimum_should_match":"100%","should":[{"query_string":{"fields":["unsw_psubject.studyLevelURL"],"query":"` + Graduate + `"}}]}}]}},"aggs":{"implementationYear":{"terms":{"field":"unsw_psubject.implementationYear_dotraw","size":100}},"availableInYears":{"terms":{"field":"unsw_psubject.availableInYears_dotraw","size":100}}},"size":100,"_source":{"includes":["versionNumber","availableInYears","implementationYear"]}}`)
+	req, err := http.NewRequest("POST", posturl, bytes.NewBuffer(requestJson))
+	req.Header.Set("Content-Type", "application/json")
+
+	//perform post
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		return "", nil, 0, err
+		return "", "", "", "", "", ErrScrapingFailed
 	}
-	// always close
 	defer resp.Body.Close()
-	htmlText, err = ioutil.ReadAll(resp.Body)
+
+	//read response body
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", nil, 0, err
+		return "", "", "", "", "", ErrScrapingFailed
+	}
+	var bodyJs Body
+	json.Unmarshal(body, &bodyJs)
+	if len(bodyJs.Contentlets) == 0 {
+		return "", "", "", "", "", ErrNotFound
 	}
 
-	return url, htmlText, resp.StatusCode, nil
+	//search response for latest year
+	yearNo := 0
+	for i := 0; i < len(bodyJs.Contentlets); i++ {
+		if bodyJs.Contentlets[yearNo].Urlmap < bodyJs.Contentlets[i].Urlmap {
+			yearNo = i
+		}
+	}
+
+	url = "https://www.handbook.unsw.edu.au" + bodyJs.Contentlets[yearNo].Urlmap
+
+	//parse "data" field of response body as json to extract relevant fields
+	var data Data
+	json.Unmarshal([]byte(bodyJs.Contentlets[yearNo].Data), &data)
+
+	desc = html.UnescapeString(data.Description)
+	//if html tags exist, take contents of first one by looking for > <
+	descSlice := strings.Split(desc, ">")
+	if len(descSlice) >= 2 {
+		desc = strings.Split(descSlice[1], "<")[0]
+	} else {
+		desc = descSlice[0]
+	}
+	term = "None"
+	if data.Offering_Detail.Offering_Terms != "" {
+		term = data.Offering_Detail.Offering_Terms
+	}
+	cond = "None"
+	if len(data.Enrolment_Rules) > 0 {
+		// cut <br> at the end of many conditions. Otherwise does nothing
+		cond = strings.Split(data.Enrolment_Rules[0].Description, "<")[0]
+	}
+
+	return url, data.Title, desc, term, cond, nil
 }
 
 func makeMessage(Url string, Title string, Desc string, Term string, Cond string) *discordgo.MessageEmbed {
@@ -189,5 +176,6 @@ func makeMessage(Url string, Title string, Desc string, Term string, Cond string
 		Fields:      messagefields,
 		Color:       0xFDD600,
 	}
+
 	return embed
 }
