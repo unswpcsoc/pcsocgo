@@ -11,6 +11,7 @@ import (
 	"strings"
 	"github.com/unswpcsoc/pcsocgo/commands"
 	"github.com/bwmarrin/discordgo"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 var (
@@ -133,19 +134,15 @@ func postSearch(Code string, Graduate string) (url string, title string, desc st
 	//parse "data" field of response body as json to extract relevant fields
 	var data Data
 	json.Unmarshal([]byte(bodyJs.Contentlets[yearNo].Data), &data)
-
 	desc = html.UnescapeString(data.Description)
-	//if html tags exist, take contents of first one by looking for > <
-	descSlice := strings.Split(desc, ">")
-	if len(descSlice) >= 2 {
-		desc = strings.Split(descSlice[1], "<")[0]
-	} else {
-		desc = descSlice[0]
-	}
+	p := bluemonday.StripTagsPolicy()
+	desc = p.Sanitize(desc)
+
 	term = "None"
 	if data.Offering_Detail.Offering_Terms != "" {
 		term = data.Offering_Detail.Offering_Terms
 	}
+
 	cond = "None"
 	if len(data.Enrolment_Rules) > 0 {
 		// cut <br> at the end of many conditions. Otherwise does nothing
