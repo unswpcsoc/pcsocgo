@@ -134,9 +134,9 @@ func postSearch(Code string, Graduate string) (url string, title string, desc st
 	//parse "data" field of response body as json to extract relevant fields
 	var data Data
 	json.Unmarshal([]byte(bodyJs.Contentlets[yearNo].Data), &data)
-	desc = html.UnescapeString(data.Description)
 	p := bluemonday.StripTagsPolicy()
-	desc = p.Sanitize(desc)
+	desc = p.Sanitize(data.Description)
+	desc = html.UnescapeString(desc)
 
 	term = "None"
 	if data.Offering_Detail.Offering_Terms != "" {
