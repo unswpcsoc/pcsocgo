@@ -165,6 +165,9 @@ func makeMessage(Url string, Title string, Desc string, Term string, Cond string
 		Inline: true,
 	}
 	messagefields := []*discordgo.MessageEmbedField{&terms, &conds}
+	if len(Desc) > 1024 {
+		Desc = Desc[:1024] + "..."
+	}
 	// make embed and return
 	embed := &discordgo.MessageEmbed{
 		URL:         Url,
