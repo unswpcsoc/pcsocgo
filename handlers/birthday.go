@@ -30,7 +30,9 @@ type Birthday struct {
 
 func newBirthday() *Birthday { return &Birthday{} }
 
-func (b *Birthday) Aliases() []string { return []string{"bday", "birthday", "birthday add", "bday add"} }
+func (b *Birthday) Aliases() []string {
+	return []string{"bday", "birthday", "birthday add", "bday add"}
+}
 
 func (b *Birthday) Desc() string {
 	return "Adds your birthday to the bot, will give you the role on the date provided. Format must be `2/jan`"
@@ -168,6 +170,7 @@ func doBirthday(ses *discordgo.Session, tim time.Time) error {
 
 	// iterate birthdays
 	for uid, bday := range bdays.Birthdays {
+		logs.Println("Check user", uid, "with birthday", bday)
 		_, err := ses.User(uid)
 		if err != nil {
 			logs.Println("Could not find user with id:", uid)
@@ -175,15 +178,16 @@ func doBirthday(ses *discordgo.Session, tim time.Time) error {
 
 		// check that the day is right
 		if !(bday.Month() == tim.Month() && bday.Day() == tim.Day()) {
-			_ = ses.GuildMemberRoleRemove(commands.Guild.ID, uid, roleID)
+			logs.Println("	Removing birthday role")
+			ses.GuildMemberRoleRemove(commands.Guild.ID, uid, roleID)
 			continue
 		}
 
 		// HAPPY @Birthday!
+		logs.Println("	Adding birthday role")
 		err = ses.GuildMemberRoleAdd(commands.Guild.ID, uid, roleID)
 		if err != nil {
-			logs.Println(err)
-			continue
+			logs.Println("		Failed to add birthday role: ", err)
 		}
 	}
 
