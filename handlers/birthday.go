@@ -38,13 +38,20 @@ func (b *Birthday) Desc() string {
 	return "Adds your birthday to the bot, will give you the role on the date provided. Format must be `2/jan`"
 }
 
-func (b *Birthday) Subcommands() []commands.Command { return []commands.Command{newBirthdayRemove()} }
+func (b *Birthday) Subcommands() []commands.Command {
+	return []commands.Command{newBirthdayRemove(), newBirthdayModCheck()}
+}
 
 func (b *Birthday) MsgHandle(ses *discordgo.Session, msg *discordgo.Message) (*commands.CommandSend, error) {
 	// parse the birthday
 	bdayString := strings.Trim(b.Birthday, " ")
 
-	birthday, err := time.Parse("2/Jan", bdayString)
+	location, err := time.LoadLocation("Australia/Sydney")
+	if err != nil {
+		return nil, err
+	}
+
+	birthday, err := time.ParseInLocation("2/Jan", bdayString, location)
 	if err != nil {
 		return nil, err
 	}
